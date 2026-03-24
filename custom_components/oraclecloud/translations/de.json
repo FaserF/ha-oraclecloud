@@ -1,0 +1,76 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "OCI API Zugangsdaten",
+        "description": "Gib Deine Oracle Cloud Infrastructure API-Zugangsdaten ein. Diese findest Du in der OCI Console unter Identität > Benutzer > Benutzerdetails > API-Schlüssel.",
+        "data": {
+          "tenancy": "Tenancy OCID",
+          "user": "Benutzer OCID",
+          "fingerprint": "Fingerabdruck",
+          "region": "Region (z.B. eu-frankfurt-1)",
+          "key_content": "Privater Schlüssel (PEM-Format)",
+          "compartment": "Compartment OCID (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zur Oracle Cloud API fehlgeschlagen",
+      "invalid_auth": "Ungültige Authentifizierungsdaten",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "abort": {
+      "already_configured": "Gerät ist bereits konfiguriert"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "cpu_utilization": { "name": "CPU-Auslastung" },
+      "memory_utilization": { "name": "RAM-Auslastung" },
+      "disk_utilization": { "name": "Festplatten-Auslastung" },
+      "network_bytes_in": { "name": "Netzwerk Eingehend" },
+      "network_bytes_out": { "name": "Netzwerk Ausgehend" },
+      "instance_state": { "name": "Instanz-Status" },
+      "public_ip": { "name": "Öffentliche IP" },
+      "private_ip": { "name": "Private IP" },
+      "disk_bytes_read": { "name": "Festplatte Gelesen (Bytes)" },
+      "disk_bytes_written": { "name": "Festplatte Geschrieben (Bytes)" },
+      "disk_iops_read": { "name": "Festplatte Lese-IOPS" },
+      "disk_iops_written": { "name": "Festplatte Schreib-IOPS" },
+      "network_drop_in": { "name": "Netzwerk Drops (In)" },
+      "network_drop_out": { "name": "Netzwerk Drops (Out)" },
+      "network_error_in": { "name": "Netzwerk Fehler (In)" },
+      "network_error_out": { "name": "Netzwerk Fehler (Out)" },
+      "load_average": { "name": "Load Average (1m)" },
+      "ocid": { "name": "Instanz-OCID" },
+      "fault_domain": { "name": "Fault Domain" },
+      "time_created": { "name": "Erstellt am" },
+      "availability_domain": { "name": "Verfügbarkeitsdomäne" },
+      "shape": { "name": "Instanz-Shape" },
+      "region": { "name": "Region" },
+      "budget_actual": { "name": "Monatliche Ausgaben" },
+      "budget_forecast": { "name": "Prognostizierte Ausgaben" },
+      "announcements_count": { "name": "Aktive Ankündigungen" },
+      "limit_arm_ocpu": { "name": "Verbleibende ARM-Kerne" },
+      "limit_arm_mem": { "name": "Verbleibender ARM-RAM" },
+      "volume_size": { "name": "Volumengröße" },
+      "volume_state": { "name": "Volumen-Status" },
+      "bucket_size": { "name": "Bucket-Größe" },
+      "bucket_count": { "name": "Anzahl der Objekte" }
+    },
+    "button": {
+      "start": { "name": "Instanz Starten" },
+      "stop": { "name": "Instanz Stoppen" },
+      "reboot": { "name": "Sanfter Neustart" },
+      "reset": { "name": "Harter Neustart" },
+      "diagnostic_reboot": { "name": "Diagnose-Neustart" }
+    },
+    "binary_sensor": {
+      "agent_status": { "name": "Compute-Agent Status" },
+      "budget_alert": { "name": "Budget-Alarm" }
+    },
+    "device_tracker": {
+      "tracker": { "name": "Instanz-Tracker" }
+    }
+  }
+}

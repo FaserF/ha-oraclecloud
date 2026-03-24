@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    ":rebaseStalePrs",
+    ":enableHelpfield",
+    ":semanticCommits"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["oci"],
+      "groupName": "OCI SDK"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    }
+  ]
+}

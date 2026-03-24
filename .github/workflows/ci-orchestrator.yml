@@ -1,0 +1,57 @@
+name: CI Orchestrator
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+
+  test:
+    uses: ./.github/workflows/test.yml
+    needs: lint
+
+  build:
+    uses: ./.github/workflows/build.yml
+    needs: test
+
+  pr-janitor:
+    name: PR Assistant
+    runs-on: ubuntu-latest
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    needs: [lint, test, build]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Auto-merge Green PRs
+        if: ${{ needs.lint.result == 'success' && needs.test.result == 'success' && needs.build.result == 'success' && (github.event.pull_request.user.login == 'FaserF' || github.event.pull_request.user.type == 'Bot') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge ${{ github.event.pull_request.number }} --auto --merge
+
+      - name: Report Failures
+        if: ${{ contains(needs.*.result, 'failure') }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const needs = ${{ toJSON(needs) }};
+            let failedJobs = [];
+            for (const [job, result] of Object.entries(needs)) {
+              if (result.result === 'failure') failedJobs.push(job);
+            }
+            
+            const body = `## ❌ CI Pipeline Failed\n\nThe following checks failed: **${failedJobs.join(', ')}**\n\n### 🔍 Probable Cause\nPlease check the Actions tab for detailed logs.\n\n### 💡 Suggested Fix\nRun linting and tests locally before pushing.`;
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

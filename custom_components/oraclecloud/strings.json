@@ -1,0 +1,42 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "OCI API Credentials",
+        "description": "Enter your Oracle Cloud Infrastructure API credentials. You can find these in the OCI Console under Identity > Users > User Details > API Keys.",
+        "data": {
+          "tenancy": "Tenancy OCID",
+          "user": "User OCID",
+          "fingerprint": "Fingerprint",
+          "region": "Region (e.g., eu-frankfurt-1)",
+          "key_content": "Private Key (PEM format)",
+          "compartment": "Compartment OCID (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Oracle Cloud API",
+      "invalid_auth": "Invalid authentication credentials",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "cpu_utilization": { "name": "CPU Utilization" },
+      "memory_utilization": { "name": "Memory Utilization" },
+      "disk_utilization": { "name": "Disk Utilization" },
+      "network_bytes_in": { "name": "Network In" },
+      "network_bytes_out": { "name": "Network Out" },
+      "instance_state": { "name": "Instance State" },
+      "public_ip": { "name": "Public IP" }
+    },
+    "button": {
+      "start": { "name": "Start Instance" },
+      "stop": { "name": "Stop Instance" },
+      "reboot": { "name": "Reboot Instance" }
+    }
+  }
+}

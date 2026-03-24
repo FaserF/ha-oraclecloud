@@ -1,0 +1,39 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+.venv/
+venv/
+ENV/
+.env
+.oci/
+*.pem
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# Local IDEs
+.vscode/
+.idea/
+
+# Distribution
+build/
+dist/
+*.egg-info/
+
+# Tests
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*mypy*.txt
+*output*.txt
+*test*.txt
+*linter*.txt
+/pytest_homeassistant_custom_component
