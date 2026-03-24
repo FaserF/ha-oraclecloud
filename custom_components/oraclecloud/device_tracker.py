@@ -50,16 +50,21 @@ class OCIDeviceTracker(CoordinatorEntity[OCIUpdateCoordinator], TrackerEntity):
         self.instance_id = instance_id
         self._attr_unique_id = f"{instance_id}_tracker"
 
-        instance_data = coordinator.data["instances"].get(instance_id)
-        if not instance_data:
-            return
-        instance = instance_data["instance"]
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, instance_id)},
-            name=instance.display_name,
+        if (
+            instance_data := coordinator.data["instances"].get(instance_id)
+        ) is not None:
+            self._instance_display_name = instance_data["instance"].display_name
+            self._instance_shape = instance_data["instance"].shape
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device info."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, self.instance_id)},
+            name=self._instance_display_name,
             manufacturer="Oracle",
-            model=instance.shape,
-            configuration_url=f"https://cloud.oracle.com/compute/instances/{instance_id}/details?region={coordinator.config['region']}",
+            model=self._instance_shape,
+            configuration_url=f"https://cloud.oracle.com/compute/instances/{self.instance_id}/details?region={self.coordinator.config['region']}",
         )
 
     @property

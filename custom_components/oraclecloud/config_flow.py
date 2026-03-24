@@ -13,10 +13,7 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
-try:
-    from homeassistant.config_entries import ConfigFlowResult
-except ImportError:
-    from homeassistant.data_entry_flow import FlowResult as ConfigFlowResult
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
     CONF_COMPARTMENT,
@@ -83,7 +80,7 @@ class OracleCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    ) -> FlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:

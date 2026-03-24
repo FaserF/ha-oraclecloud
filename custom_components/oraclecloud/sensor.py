@@ -13,6 +13,7 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfInformation
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -454,7 +455,7 @@ class OCIAccountSensor(CoordinatorEntity[OCIUpdateCoordinator], SensorEntity):
             identifiers={(DOMAIN, f"{self.coordinator.config['tenancy']}_account")},
             name=f"OCI Account ({self.coordinator.username})",
             manufacturer="Oracle",
-            entry_type="service",
+            entry_type=DeviceEntryType.SERVICE,
         )
 
     @property

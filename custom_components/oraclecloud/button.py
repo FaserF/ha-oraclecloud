@@ -110,6 +110,7 @@ class OCIButton(CoordinatorEntity[OCIUpdateCoordinator], ButtonEntity):
             action = "diagnosticreboot"
 
         try:
+            assert self.coordinator.compute_client is not None
             await self.hass.async_add_executor_job(
                 self.coordinator.compute_client.instance_action,
                 self.instance_id,
