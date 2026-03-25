@@ -212,6 +212,29 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
         icon="mdi:map-marker",
         entity_registry_enabled_default=False,
     ),
+    # Throttling & Networking (Disabled by default)
+    SensorEntityDescription(
+        key="network_throttle_in",
+        name="Network In Throttled Drops",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:gauge-low",
+        entity_registry_enabled_default=False,
+    ),
+    SensorEntityDescription(
+        key="network_throttle_out",
+        name="Network Out Throttled Drops",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:gauge-low",
+        entity_registry_enabled_default=False,
+    ),
+    SensorEntityDescription(
+        key="vnic_conntrack_utilization",
+        name="VNIC Conntrack Utilization",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:lan-pending",
+        entity_registry_enabled_default=False,
+    ),
 )
 
 ACCOUNT_SENSORS: tuple[SensorEntityDescription, ...] = (
@@ -236,14 +259,14 @@ ACCOUNT_SENSORS: tuple[SensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
-        key="limit_arm_ocpu",
-        name="Remaining ARM OCPUs",
+        key="used_arm_ocpu",
+        name="Used ARM OCPUs",
         icon="mdi:cpu-64-bit",
         state_class=SensorStateClass.MEASUREMENT,
     ),
     SensorEntityDescription(
-        key="limit_arm_mem",
-        name="Remaining ARM Memory",
+        key="used_arm_mem",
+        name="Used ARM Memory",
         native_unit_of_measurement=UnitOfInformation.GIGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -262,6 +285,29 @@ VOLUME_SENSORS: tuple[SensorEntityDescription, ...] = (
         key="volume_state",
         name="Volume State",
         icon="mdi:database",
+    ),
+    SensorEntityDescription(
+        key="volume_throttled_ios",
+        name="Volume Throttled IOPS",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:database-alert-outline",
+        entity_registry_enabled_default=False,
+    ),
+    SensorEntityDescription(
+        key="volume_read_throughput",
+        name="Volume Read Throughput",
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+    ),
+    SensorEntityDescription(
+        key="volume_write_throughput",
+        name="Volume Write Throughput",
+        native_unit_of_measurement=UnitOfInformation.BYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
     ),
 )
 
@@ -417,6 +463,15 @@ class OCISensor(CoordinatorEntity[OCIUpdateCoordinator], SensorEntity):
                 )
             return None
 
+        if self.entity_description.key == "network_throttle_in":
+            return instance_data.get("network_throttle_in")
+
+        if self.entity_description.key == "network_throttle_out":
+            return instance_data.get("network_throttle_out")
+
+        if self.entity_description.key == "vnic_conntrack_utilization":
+            return instance_data.get("vnic_conntrack_utilization")
+
         return instance_data.get(self.entity_description.key)
 
     @property
@@ -473,10 +528,10 @@ class OCIAccountSensor(CoordinatorEntity[OCIUpdateCoordinator], SensorEntity):
             return round(val, 2) if val is not None else None
         if self.entity_description.key == "announcements_count":
             return account_data.get("announcements")
-        if self.entity_description.key == "limit_arm_ocpu":
-            return account_data.get("limits", {}).get("standard-a1-core-count")
-        if self.entity_description.key == "limit_arm_mem":
-            return account_data.get("limits", {}).get("standard-a1-memory-count")
+        if self.entity_description.key == "used_arm_ocpu":
+            return account_data.get("used_arm_ocpu")
+        if self.entity_description.key == "used_arm_mem":
+            return account_data.get("used_arm_mem")
 
         return None
 
@@ -528,6 +583,12 @@ class OCIVolumeSensor(CoordinatorEntity[OCIUpdateCoordinator], SensorEntity):
             return volume_data.get("size_in_gbs")
         if self.entity_description.key == "volume_state":
             return volume_data.get("lifecycle_state")
+        if self.entity_description.key == "volume_throttled_ios":
+            return volume_data.get("volume_throttled_ios")
+        if self.entity_description.key == "volume_read_throughput":
+            return volume_data.get("volume_read_throughput")
+        if self.entity_description.key == "volume_write_throughput":
+            return volume_data.get("volume_write_throughput")
 
         return None
 

@@ -34,7 +34,7 @@ No manual script-polling or complex setup is required — everything is handled 
   - **Public/Private IP**: Track IP addresses for dynamic DNS or connectivity monitoring.
 - **Account Monitoring**:
   - **Budgets**: Track actual monthly spend, forecasted costs, and spend percentage.
-  - **Resource Limits**: Real-time tracking of "Always Free" quotas (OCPUs, Memory).
+  - **Resource Usage**: Real-time tracking of "Always Free" resource consumption (Used OCPUs, Memory).
   - **Announcements**: Monitor active maintenance and security notices.
 - **Storage Analytics**:
   - **Block Volumes**: Monitor size and lifecycle state of all attached volumes.
@@ -112,7 +112,7 @@ The integration provides a wide range of entities to monitor your cloud resource
 
 ### Account & Storage (Tenancy-wide)
 - **Budgets**: Actual Spend, Forecasted Spend.
-- **Resource Limits**: ARM OCPU and Memory quotas (Always Free tracking).
+- **Resource Usage**: ARM OCPU and Memory consumption (Always Free tracking).
 - **Announcements**: Total count of active maintenance and security notices.
 - **Block Storage**: Size and Lifecycle State of all volumes in the compartment.
 - **Object Storage**: Approximate Size and Object Count for every bucket.
@@ -248,8 +248,23 @@ action:
 ### Only some VMs are found
 - By default, the integration searches the root compartment. If your VMs are in a sub-compartment, provide that **Compartment OCID** in the integration configuration.
 
-### Metrics are showing `Unavailable`
-- It can take up to 5-10 minutes after initial configuration for OCI to begin providing monitoring metrics to the API.
+### Metrics are showing `Unavailable` or `Unknown`
+The OCI Monitoring API relies on several factors. If sensors show as "Unknown" or "Unavailable", check the following:
+
+#### 🖥️ Compute Instance Sensors (CPU, RAM, Network, Disk)
+- **Agent Dependency**: These metrics require the **Oracle Cloud Agent** to be installed and running on the VM.
+- **Plugin Status**: In the OCI Console, go to **Instance Details > Resources > Compute Agent**. Ensure the **Compute Instance Monitoring** plugin is enabled and status is `Running`.
+- **Latency**: OCI Monitoring data has a 2-5 minute propagation delay. The integration uses a sliding window to ensure data is available.
+- **Disk Utilization**: This specific metric is often disabled by default. Ensure `oci-utils` is installed on your Linux VM for the agent to report filesystem usage.
+- **Throttling & Conntrack**: These require VNIC-level monitoring to be active. They are disabled by default in Home Assistant.
+- **Plural Naming**: Newer versions (2.2.0+) of the OCI agent use plural metric names (e.g., `NetworksBytesIn`). This integration automatically handles both singular and plural names.
+
+#### 💰 Account & Budget Sensors
+- **Scope**: Budgets and Announcements are tenancy-wide. Ensure your API user has `inspect` permissions at the **Root** compartment (Tenancy) level.
+- **ARM Usage**: Used OCPU/Memory sensors now sum consumption across all **Availability Domains**.
+
+#### 📦 Storage Sensors (Volumes, Buckets)
+- **Compartment Scope**: By default, the integration searches the compartment you provided (or the Root). If your storage resources are in a different compartment, they will not appear unless you configure a specific Compartment OCID.
 
 ### 🛡️ Dependency Workaround (Technical Note)
 As of early 2026, the official OCI Python SDK on PyPI has a restrictive version cap on `pyOpenSSL` and `cryptography` that conflicts with modern Home Assistant environments. We use a patched fork to resolve this:

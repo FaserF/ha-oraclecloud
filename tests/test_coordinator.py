@@ -85,11 +85,19 @@ async def test_coordinator_update(
     mock_budget_data.alert_rule_count = 1
     mock_budget.return_value.list_budgets.return_value.data = [mock_budget_data]
 
-    # Mock Limits response
-    mock_limit_value = MagicMock()
-    mock_limit_value.name = "standard-a1-core-count"
-    mock_limit_value.value = 4
-    mock_limits.return_value.list_limit_values.return_value.data = [mock_limit_value]
+    # Mock Limits response (Mocking two ADs to test summing)
+    mock_limit_value_ad2 = MagicMock()
+    mock_limit_value_ad2.name = "standard-a1-core-count"
+    mock_limit_value_ad2.value = 250
+    mock_limit_value_ad3 = MagicMock()
+    mock_limit_value_ad3.name = "standard-a1-core-count"
+    mock_limit_value_ad3.value = 250
+
+    # Let's just fix the mock_limits call to simulate multiple ADs.
+    mock_limits.return_value.list_limit_values.side_effect = [
+        MagicMock(data=[mock_limit_value_ad2]),
+        MagicMock(data=[mock_limit_value_ad3]),
+    ]
 
     # Mock Announcements response
     mock_announcements.return_value.list_announcements.return_value.data = [MagicMock()]
@@ -113,7 +121,22 @@ async def test_coordinator_update(
     mock_objectstorage.return_value.get_bucket.return_value.data = mock_bucket_details
 
     # Fetch data
-    data = await coordinator._async_update_data()
+    with patch(
+        "custom_components.oraclecloud.coordinator.OCIUpdateCoordinator._ensure_clients"
+    ):
+        coordinator.identity_client = MagicMock()
+        ad1 = MagicMock()
+        ad1.name = "AD-1"
+        ad2 = MagicMock()
+        ad2.name = "AD-2"
+        ad3 = MagicMock()
+        ad3.name = "AD-3"
+        coordinator.identity_client.list_availability_domains.return_value.data = [
+            ad1,
+            ad2,
+            ad3,
+        ]
+        data = await coordinator._async_update_data()
 
     assert "instances" in data
     assert "inst1" in data["instances"]
@@ -123,13 +146,22 @@ async def test_coordinator_update(
     assert data["instances"]["inst1"]["mac_address"] == "00:11:22:33:44:55"
     assert data["instances"]["inst1"]["os_name"] == "Ubuntu"
     assert data["instances"]["inst1"]["cpu_utilization"] == 45.5
+    assert data["instances"]["inst1"]["vnic_id"] == "vnic1"
 
     assert "account" in data
     assert data["account"]["budget"]["actual_spend"] == 10.5
-    assert data["account"]["limits"]["standard-a1-core-count"] == 4
+    # Should be 500 (250+250)
+    assert data["account"]["limits"]["standard-a1-core-count"] == 500
+    # Used should be 4 (from inst1)
+    assert data["account"]["used_arm_ocpu"] == 4.0
+    assert data["account"]["used_arm_mem"] == 24.0
+
     assert data["account"]["announcements"] == 1
     assert len(data["account"]["volumes"]) == 1
     assert data["account"]["volumes"][0]["display_name"] == "Boot Volume"
+    assert (
+        data["account"]["volumes"][0]["volume_throttled_ios"] == 45.5
+    )  # Mocked metric value
     assert len(data["account"]["buckets"]) == 1
     assert data["account"]["buckets"][0]["name"] == "my-bucket"
     assert data["account"]["buckets"][0]["size"] == 1024

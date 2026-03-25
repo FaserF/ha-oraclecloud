@@ -166,8 +166,9 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     public_ip = vnic.public_ip
                     private_ip = vnic.private_ip
                     mac_address = vnic.mac_address
+                    vnic_id = vnic.id
                 except Exception:
-                    pass
+                    vnic_id = None
 
             # Get Metrics
             end_time = datetime.now(UTC)
@@ -208,6 +209,33 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 end_time,
                 instance.compartment_id,
             )
+
+            # Get Throttling Metrics (Need VNIC ID for oci_vcn namespace)
+            net_throttle_in = None
+            net_throttle_out = None
+            vnic_conntrack = None
+            if vnic_id:
+                net_throttle_in = self._get_metric(
+                    "VnicIngressDropsThrottle",
+                    vnic_id,
+                    start_time,
+                    end_time,
+                    instance.compartment_id,
+                )
+                net_throttle_out = self._get_metric(
+                    "VnicEgressDropsThrottle",
+                    vnic_id,
+                    start_time,
+                    end_time,
+                    instance.compartment_id,
+                )
+                vnic_conntrack = self._get_metric(
+                    "VnicConntrackUtilPercent",
+                    vnic_id,
+                    start_time,
+                    end_time,
+                    instance.compartment_id,
+                )
 
             # Get Extended Metrics
             disk_read_bytes = self._get_metric(
@@ -281,6 +309,7 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "public_ip": public_ip,
                 "private_ip": private_ip,
                 "mac_address": mac_address,
+                "vnic_id": vnic_id,
                 "os_name": os_name,
                 "os_version": os_version,
                 "cpu_utilization": cpu,
@@ -297,6 +326,9 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "network_error_in": net_err_in,
                 "network_error_out": net_err_out,
                 "load_average": load_avg,
+                "network_throttle_in": net_throttle_in,
+                "network_throttle_out": net_throttle_out,
+                "vnic_conntrack_utilization": vnic_conntrack,
             }
 
         # Fetch Account-Wide Metrics (Budgets, Limits, Announcements)
@@ -323,15 +355,49 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Limits (Always Free ARM/AMD)
         try:
             assert self.limits_client is not None
-            # Use list_limit_values as it's more robust and doesn't require AD
-            limits = self.limits_client.list_limit_values(
-                compartment_id=self.config["tenancy"],
-                service_name="compute",
+            assert self.identity_client is not None
+
+            # Fetch all Availability Domains to check limits in each
+            ads = self.identity_client.list_availability_domains(
+                self.config["tenancy"]
             ).data
-            relevant_limits = {}
-            for limit in limits:
-                if limit.name in ["standard-a1-memory-count", "standard-a1-core-count"]:
-                    relevant_limits[limit.name] = limit.value
+
+            relevant_limits = {
+                "standard-a1-memory-count": 0.0,
+                "standard-a1-core-count": 0.0,
+            }
+
+            for ad in ads:
+                try:
+                    limits = self.limits_client.list_limit_values(
+                        compartment_id=self.config["tenancy"],
+                        service_name="compute",
+                        availability_domain=ad.name,
+                    ).data
+                    for limit in limits:
+                        if limit.name == "standard-a1-memory-count":
+                            relevant_limits["standard-a1-memory-count"] += float(
+                                limit.value
+                            )
+                        elif limit.name == "standard-a1-core-count":
+                            relevant_limits["standard-a1-core-count"] += float(
+                                limit.value
+                            )
+                except Exception as err:
+                    LOGGER.debug("Failed to fetch limits for AD %s: %s", ad.name, err)
+
+            # Fallback to regional limits if AD-specific ones are 0
+            if relevant_limits["standard-a1-core-count"] == 0:
+                limits = self.limits_client.list_limit_values(
+                    compartment_id=self.config["tenancy"],
+                    service_name="compute",
+                ).data
+                for limit in limits:
+                    if limit.name == "standard-a1-memory-count":
+                        relevant_limits["standard-a1-memory-count"] = float(limit.value)
+                    elif limit.name == "standard-a1-core-count":
+                        relevant_limits["standard-a1-core-count"] = float(limit.value)
+
             account_data["limits"] = relevant_limits
         except Exception as err:
             LOGGER.error("Failed to fetch limits: %s", err)
@@ -356,12 +422,38 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ).data
             volume_data = []
             for vol in volumes:
+                # Get block volume metrics
+                vol_throttle = self._get_metric(
+                    "VolumeThrottledIOs",
+                    vol.id,
+                    start_time,
+                    end_time,
+                    self.compartment_id,
+                )
+                vol_read_tp = self._get_metric(
+                    "VolumeReadThroughput",
+                    vol.id,
+                    start_time,
+                    end_time,
+                    self.compartment_id,
+                )
+                vol_write_tp = self._get_metric(
+                    "VolumeWriteThroughput",
+                    vol.id,
+                    start_time,
+                    end_time,
+                    self.compartment_id,
+                )
+
                 volume_data.append(
                     {
                         "id": vol.id,
                         "display_name": vol.display_name,
                         "size_in_gbs": vol.size_in_gbs,
                         "lifecycle_state": vol.lifecycle_state,
+                        "volume_throttled_ios": vol_throttle,
+                        "volume_read_throughput": vol_read_tp,
+                        "volume_write_throughput": vol_write_tp,
                     }
                 )
             account_data["volumes"] = volume_data
@@ -391,6 +483,19 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         except Exception:
             pass
 
+        # Calculate total used ARM resources
+        total_used_arm_ocpu = 0.0
+        total_used_arm_mem = 0.0
+        for inst_data in results.values():
+            inst = inst_data["instance"]
+            if inst.shape and "a1" in inst.shape.lower():
+                if hasattr(inst, "shape_config") and inst.shape_config:
+                    total_used_arm_ocpu += inst.shape_config.ocpus
+                    total_used_arm_mem += inst.shape_config.memory_in_gbs
+
+        account_data["used_arm_ocpu"] = total_used_arm_ocpu
+        account_data["used_arm_mem"] = total_used_arm_mem
+
         return {"instances": results, "account": account_data}
 
     def _get_metric(
@@ -405,15 +510,33 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._ensure_clients()
         assert self.monitoring_client is not None
 
-        # Select best namespace based on metric name for better performance
+        # Some metrics have different names depending on the agent version or instance type
+        metric_names = [metric_name]
+        if metric_name == "NetworkBytesIn":
+            metric_names.append("NetworksBytesIn")
+        elif metric_name == "NetworkBytesOut":
+            metric_names.append("NetworksBytesOut")
+
+        # Select best namespaces
+        namespaces = [
+            "oci_computeagent",
+            "oci_compute_infrastructure",
+            "oci_vmi_resource_utilization",
+        ]
         if (
             metric_name.startswith("Network")
             or metric_name.startswith("DiskBytes")
             or metric_name.startswith("DiskIops")
+            or metric_name.startswith("Vnic")
+            or metric_name.startswith("Volume")
         ):
-            namespaces = ["oci_compute_infrastructure", "oci_computeagent"]
-        else:
-            namespaces = ["oci_computeagent", "oci_compute_infrastructure"]
+            namespaces = [
+                "oci_compute_infrastructure",
+                "oci_computeagent",
+                "oci_vmi_resource_utilization",
+                "oci_vcn",
+                "oci_blockstore",
+            ]
 
         # Cloud monitoring data often has a propagation delay.
         # We look back 60 minutes and add a 2-minute buffer from "now" to ensure data is available.
@@ -422,31 +545,32 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         start_time_eff = now - timedelta(minutes=62)
 
         for namespace in namespaces:
-            try:
-                # Use a robust MQL query. [1m] interval for high-res agents, fallback to infraestructura
-                # We use .mean() but since we've buffered, we should get the most recent valid point.
-                details = oci.monitoring.models.SummarizeMetricsDataDetails(
-                    namespace=namespace,
-                    query=f'{metric_name}[1m]{{resourceId="{instance_id}"}}.mean()',
-                    start_time=start_time_eff,
-                    end_time=end_time_eff,
-                )
-                stats = self.monitoring_client.summarize_metrics_data(
-                    compartment_id, details
-                ).data
+            for name in metric_names:
+                try:
+                    # Use a robust MQL query. [1m] interval for high-res agents, fallback to infraestructura
+                    # We use .mean() but since we've buffered, we should get the most recent valid point.
+                    details = oci.monitoring.models.SummarizeMetricsDataDetails(
+                        namespace=namespace,
+                        query=f'{name}[1m]{{resourceId="{instance_id}"}}.mean()',
+                        start_time=start_time_eff,
+                        end_time=end_time_eff,
+                    )
+                    stats = self.monitoring_client.summarize_metrics_data(
+                        compartment_id, details
+                    ).data
 
-                if stats and stats[0].aggregated_datapoints:
-                    # Return the latest available data point in the window
-                    val = stats[0].aggregated_datapoints[-1].value
-                    if val is not None:
-                        return round(float(val), 2)
+                    if stats and stats[0].aggregated_datapoints:
+                        # Return the latest available data point in the window
+                        val = stats[0].aggregated_datapoints[-1].value
+                        if val is not None:
+                            return round(float(val), 2)
 
-            except Exception as err:
-                LOGGER.debug(
-                    "Failed to fetch metric %s from %s for %s: %s",
-                    metric_name,
-                    namespace,
-                    instance_id,
-                    err,
-                )
+                except Exception as err:
+                    LOGGER.debug(
+                        "Failed to fetch metric %s from %s for %s: %s",
+                        name,
+                        namespace,
+                        instance_id,
+                        err,
+                    )
         return None

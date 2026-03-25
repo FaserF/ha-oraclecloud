@@ -44,13 +44,15 @@ async def test_sensors(hass: HomeAssistant) -> None:
         "account": {
             "budget": {"actual_spend": 10.5, "forecasted_spend": 50.0},
             "announcements": 1,
-            "limits": {"standard-a1-core-count": 4},
+            "used_arm_ocpu": 4.0,
+            "used_arm_mem": 24.0,
             "volumes": [
                 {
                     "id": "vol1",
                     "display_name": "Boot Volume",
                     "size_in_gbs": 50,
                     "lifecycle_state": "AVAILABLE",
+                    "volume_throttled_ios": 0.0,
                 }
             ],
             "buckets": [
@@ -86,13 +88,23 @@ async def test_sensors(hass: HomeAssistant) -> None:
     sensor = OCISensor(mock_coordinator, "inst1", description)
     assert sensor.native_value == "RUNNING"
 
-    # Test Account Sensor (Budget)
-    description = next(s for s in ACCOUNT_SENSORS if s.key == "budget_actual")
+    # Test Account Sensor (Used OCPU)
+    description = next(s for s in ACCOUNT_SENSORS if s.key == "used_arm_ocpu")
     sensor = OCIAccountSensor(mock_coordinator, description)
-    assert sensor.native_value == 10.5
+    assert sensor.native_value == 4.0
+
+    # Test Account Sensor (Used Memory)
+    description = next(s for s in ACCOUNT_SENSORS if s.key == "used_arm_mem")
+    sensor = OCIAccountSensor(mock_coordinator, description)
+    assert sensor.native_value == 24.0
 
     # Test Volume Sensor
     description = next(s for s in VOLUME_SENSORS if s.key == "volume_size")
     sensor = OCIVolumeSensor(mock_coordinator, "vol1", description)
     assert sensor.native_value == 50
     assert sensor.name == "Boot Volume Volume Size"
+
+    # Test Volume Throttling Sensor
+    description = next(s for s in VOLUME_SENSORS if s.key == "volume_throttled_ios")
+    sensor = OCIVolumeSensor(mock_coordinator, "vol1", description)
+    assert sensor.native_value == 0.0
