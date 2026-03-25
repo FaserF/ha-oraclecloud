@@ -9,9 +9,8 @@ import voluptuous as vol
 if TYPE_CHECKING:
     pass
 
-from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
@@ -72,14 +71,14 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     return {"title": title}
 
 
-class OracleCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class OracleCloudConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Oracle Cloud Infrastructure."""
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
