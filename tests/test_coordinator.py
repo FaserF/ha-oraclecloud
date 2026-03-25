@@ -18,11 +18,13 @@ from .test_config_flow import MOCK_DATA
 @patch("oci.budget.BudgetClient")
 @patch("oci.limits.LimitsClient")
 @patch("oci.announcements_service.AnnouncementClient")
+@patch("oci.identity.IdentityClient")
 @patch("oci.core.BlockstorageClient")
 @patch("oci.object_storage.ObjectStorageClient")
 async def test_coordinator_update(
     mock_objectstorage: Any,
     mock_blockstorage: Any,
+    mock_identity: Any,
     mock_announcements: Any,
     mock_limits: Any,
     mock_budget: Any,
@@ -36,6 +38,19 @@ async def test_coordinator_update(
     mock_entry.data = MOCK_DATA
 
     coordinator = OCIUpdateCoordinator(hass, mock_entry)
+
+    # Mock Identity response
+    ad1 = MagicMock()
+    ad1.name = "AD-1"
+    ad2 = MagicMock()
+    ad2.name = "AD-2"
+    ad3 = MagicMock()
+    ad3.name = "AD-3"
+    mock_identity.return_value.list_availability_domains.return_value.data = [
+        ad1,
+        ad2,
+        ad3,
+    ]
 
     # Mock Instance response
     mock_instance = MagicMock()
@@ -65,6 +80,7 @@ async def test_coordinator_update(
     ]
 
     mock_vnic_data = MagicMock()
+    mock_vnic_data.id = "vnic1"
     mock_vnic_data.public_ip = "1.2.3.4"
     mock_vnic_data.private_ip = "10.0.0.1"
     mock_vnic_data.mac_address = "00:11:22:33:44:55"
@@ -100,7 +116,9 @@ async def test_coordinator_update(
     ]
 
     # Mock Announcements response
-    mock_announcements.return_value.list_announcements.return_value.data = [MagicMock()]
+    mock_ann_coll = MagicMock()
+    mock_ann_coll.items = [MagicMock()]
+    mock_announcements.return_value.list_announcements.return_value.data = mock_ann_coll
 
     # Mock Block Storage response
     mock_volume = MagicMock()
