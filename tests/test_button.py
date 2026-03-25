@@ -1,6 +1,6 @@
 """Tests for the Oracle Cloud Infrastructure buttons."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from homeassistant.core import HomeAssistant
 
@@ -21,8 +21,9 @@ async def test_buttons(hass: HomeAssistant) -> None:
             }
         }
     }
-    mock_coordinator.config = {"region": "us-ashburn-1"}
+    mock_coordinator.config = {"region": "us-ashburn-1", "tenancy": "tenancy1"}
     mock_coordinator.compute_client = MagicMock()
+    mock_coordinator.async_request_refresh = AsyncMock()
 
     # Test Start Button
     description = next(b for b in BUTTONS if b.key == "start")

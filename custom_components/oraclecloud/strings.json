@@ -31,12 +31,46 @@
       "network_bytes_in": { "name": "Network In" },
       "network_bytes_out": { "name": "Network Out" },
       "instance_state": { "name": "Instance State" },
-      "public_ip": { "name": "Public IP" }
+      "public_ip": { "name": "Public IP" },
+      "private_ip": { "name": "Private IP" },
+      "disk_bytes_read": { "name": "Disk Read Bytes" },
+      "disk_bytes_written": { "name": "Disk Write Bytes" },
+      "disk_iops_read": { "name": "Disk Read IOPS" },
+      "disk_iops_written": { "name": "Disk Write IOPS" },
+      "network_drop_in": { "name": "Network In Drops" },
+      "network_drop_out": { "name": "Network Out Drops" },
+      "network_error_in": { "name": "Network In Errors" },
+      "network_error_out": { "name": "Network Out Errors" },
+      "load_average": { "name": "Load Average (1m)" },
+      "ocid": { "name": "Instance OCID" },
+      "fault_domain": { "name": "Fault Domain" },
+      "time_created": { "name": "Created At" },
+      "availability_domain": { "name": "Availability Domain" },
+      "shape": { "name": "Shape" },
+      "region": { "name": "Region" },
+      "budget_actual": { "name": "Monthly Spend" },
+      "budget_forecast": { "name": "Forecasted Spend" },
+      "announcements_count": { "name": "Active Announcements" },
+      "limit_arm_ocpu": { "name": "Remaining ARM OCPUs" },
+      "limit_arm_mem": { "name": "Remaining ARM Memory" },
+      "volume_size": { "name": "Volume Size" },
+      "volume_state": { "name": "Volume State" },
+      "bucket_size": { "name": "Bucket Size" },
+      "bucket_count": { "name": "Object Count" }
     },
     "button": {
       "start": { "name": "Start Instance" },
       "stop": { "name": "Stop Instance" },
-      "reboot": { "name": "Reboot Instance" }
+      "reboot": { "name": "Soft Reboot" },
+      "reset": { "name": "Hard Reset" },
+      "diagnostic_reboot": { "name": "Diagnostic Reboot" }
+    },
+    "binary_sensor": {
+      "agent_status": { "name": "Compute Agent Status" },
+      "budget_alert": { "name": "Budget Alert" }
+    },
+    "device_tracker": {
+      "tracker": { "name": "Instance Tracker" }
     }
   }
 }

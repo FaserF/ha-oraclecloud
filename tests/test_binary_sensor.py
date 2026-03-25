@@ -29,7 +29,7 @@ async def test_binary_sensors(hass: HomeAssistant) -> None:
             "budget": {"actual_spend": 100.0, "amount": 90.0},
         },
     }
-    mock_coordinator.config = {"region": "us-ashburn-1"}
+    mock_coordinator.config = {"region": "us-ashburn-1", "tenancy": "tenancy1"}
 
     # Test Agent Status (On)
     description = next(b for b in BINARY_SENSORS if b.key == "agent_status")

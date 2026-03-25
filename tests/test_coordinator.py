@@ -17,7 +17,7 @@ from .test_config_flow import MOCK_DATA
 @patch("oci.core.VirtualNetworkClient")
 @patch("oci.budget.BudgetClient")
 @patch("oci.limits.LimitsClient")
-@patch("oci.announcements.AnnouncementsClient")
+@patch("oci.announcements_service.AnnouncementClient")
 @patch("oci.core.BlockstorageClient")
 @patch("oci.object_storage.ObjectStorageClient")
 async def test_coordinator_update(
@@ -121,22 +121,7 @@ async def test_coordinator_update(
     mock_objectstorage.return_value.get_bucket.return_value.data = mock_bucket_details
 
     # Fetch data
-    with patch(
-        "custom_components.oraclecloud.coordinator.OCIUpdateCoordinator._ensure_clients"
-    ):
-        coordinator.identity_client = MagicMock()
-        ad1 = MagicMock()
-        ad1.name = "AD-1"
-        ad2 = MagicMock()
-        ad2.name = "AD-2"
-        ad3 = MagicMock()
-        ad3.name = "AD-3"
-        coordinator.identity_client.list_availability_domains.return_value.data = [
-            ad1,
-            ad2,
-            ad3,
-        ]
-        data = await coordinator._async_update_data()
+    data = await coordinator._async_update_data()
 
     assert "instances" in data
     assert "inst1" in data["instances"]

@@ -37,3 +37,4 @@ dist/
 *test*.txt
 *linter*.txt
 /pytest_homeassistant_custom_component
+out.txt

@@ -102,7 +102,7 @@ async def test_sensors(hass: HomeAssistant) -> None:
     description = next(s for s in VOLUME_SENSORS if s.key == "volume_size")
     sensor = OCIVolumeSensor(mock_coordinator, "vol1", description)
     assert sensor.native_value == 50
-    assert sensor.name == "Boot Volume Volume Size"
+    assert sensor.name == "Volume Size"
 
     # Test Volume Throttling Sensor
     description = next(s for s in VOLUME_SENSORS if s.key == "volume_throttled_ios")
