@@ -1,19 +1,23 @@
-{
+﻿{
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base",
+    "config:recommended",
     ":rebaseStalePrs",
-    ":enableHelpfield",
-    ":semanticCommits"
+    ":prHourlyLimitNone",
+    ":dependencyDashboard"
   ],
+  "rangeStrategy": "pin",
   "packageRules": [
     {
-      "matchPackageNames": ["oci"],
-      "groupName": "OCI SDK"
-    },
-    {
-      "matchManagers": ["github-actions"],
-      "groupName": "GitHub Actions"
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true
     }
-  ]
+  ],
+  "python": {
+    "enabled": true
+  },
+  "github-actions": {
+    "enabled": true
+  }
 }
