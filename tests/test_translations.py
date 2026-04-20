@@ -51,15 +51,15 @@ def test_translation_files_parity() -> None:
 
         # Check for keys in strings.json but missing in translation
         missing_in_translation = strings_keys - translation_keys
-        assert not missing_in_translation, (
-            f"Keys in strings.json missing in {lang}.json: {sorted(missing_in_translation)}"
-        )
+        assert (
+            not missing_in_translation
+        ), f"Keys in strings.json missing in {lang}.json: {sorted(missing_in_translation)}"
 
         # Check for extra keys in translation not in strings.json
         extra_in_translation = translation_keys - strings_keys
-        assert not extra_in_translation, (
-            f"Extra keys in {lang}.json not in strings.json: {sorted(extra_in_translation)}"
-        )
+        assert (
+            not extra_in_translation
+        ), f"Extra keys in {lang}.json not in strings.json: {sorted(extra_in_translation)}"
 
 
 def test_translation_values_not_empty() -> None:
@@ -87,6 +87,6 @@ def test_translation_values_not_empty() -> None:
             return invalid
 
         invalid_keys = _check_values(data)
-        assert not invalid_keys, (
-            f"Invalid translation values in {file_path.name}: {sorted(invalid_keys)}"
-        )
+        assert (
+            not invalid_keys
+        ), f"Invalid translation values in {file_path.name}: {sorted(invalid_keys)}"

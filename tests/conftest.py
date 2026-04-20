@@ -34,19 +34,25 @@ homeassistant.helpers.frame.report = lambda *args, **kwargs: None
 if not hasattr(ha, "_cv_hass"):
     ha._cv_hass = contextvars.ContextVar("cv_hass", default=None)
 
+
 # Patch HomeAssistant class EARLY
 def patched_hass_new(cls, *args, **kwargs):
     """Permissive __new__ to handle various Core versions."""
     return object.__new__(cls)
 
+
 HomeAssistant.__new__ = patched_hass_new
 
 _ORIG_HASS_INIT = HomeAssistant.__init__
+
+
 def patched_hass_init(self, config_dir="config", *args, **kwargs):
     """Permissive __init__ to handle missing config_dir from plugin."""
     _ORIG_HASS_INIT(self, config_dir, *args, **kwargs)
 
+
 HomeAssistant.__init__ = patched_hass_init
+
 
 @pytest.fixture
 def event_loop():
@@ -55,6 +61,7 @@ def event_loop():
     loop = policy.new_event_loop()
     yield loop
     # Do NOT close the loop here
+
 
 @pytest.fixture(autouse=True)
 async def fix_instance_methods(hass: HomeAssistant):
@@ -67,42 +74,51 @@ async def fix_instance_methods(hass: HomeAssistant):
     async def async_stop_mock(*args, **kwargs):
         while hass in INSTANCES:
             INSTANCES.remove(hass)
+
     hass.async_stop = async_stop_mock
 
     def stop_mock(*args, **kwargs):
         while hass in INSTANCES:
             INSTANCES.remove(hass)
+
     hass.stop = stop_mock
 
     # fix async_create_task to be permissive and use the right loop
     orig_create_task = hass.async_create_task
+
     def patched_create_task(target, name=None, **kwargs):
         try:
             return orig_create_task(target, name=name, **kwargs)
-        except (TypeError, AttributeError):
+        except TypeError, AttributeError:
             if isinstance(orig_create_task, MagicMock):
                 return orig_create_task(target)
             return current_loop.create_task(target)
+
     hass.async_create_task = patched_create_task
 
     # fix async_add_job
     orig_add_job = hass.async_add_job
+
     def patched_add_job(target, *args, **kwargs):
         try:
             return orig_add_job(target, *args, **kwargs)
-        except (TypeError, AttributeError):
+        except TypeError, AttributeError:
             if isinstance(orig_add_job, MagicMock):
                 return orig_add_job(target)
             if asyncio.iscoroutine(target) or asyncio.iscoroutinefunction(target):
                 return current_loop.create_task(target(*args))
             return current_loop.call_soon(target, *args)
+
     hass.async_add_job = patched_add_job
+
 
 @pytest.fixture(scope="session", autouse=True)
 def global_ha_patching():
     """Apply global patches to HomeAssistant core for test stability."""
 
-    _SESSION_EXECUTOR = ThreadPoolExecutor(max_workers=10, thread_name_prefix="waitpid-ha-test")
+    _SESSION_EXECUTOR = ThreadPoolExecutor(
+        max_workers=10, thread_name_prefix="waitpid-ha-test"
+    )
 
     def patched_async_add_executor_job(self, target, *args):
         try:
@@ -112,6 +128,7 @@ def global_ha_patching():
         return loop.run_in_executor(_SESSION_EXECUTOR, target, *args)
 
     HomeAssistant.async_add_executor_job = patched_async_add_executor_job
+
 
 @pytest.fixture(autouse=True)
 async def mock_integration_loading(hass: HomeAssistant) -> None:
@@ -135,7 +152,9 @@ async def mock_integration_loading(hass: HomeAssistant) -> None:
         codeowners=["faserf"],
         is_built_in=False,
     )
-    integration = loader.Integration(hass, f"custom_components.{domain}", path, manifest)
+    integration = loader.Integration(
+        hass, f"custom_components.{domain}", path, manifest
+    )
 
     # We don't want to fully mock the component module anymore,
     # we want to let the real code load to register the config flow handler.
@@ -143,6 +162,7 @@ async def mock_integration_loading(hass: HomeAssistant) -> None:
 
     hass.data["custom_components"][domain] = integration
     hass.data["integrations"][domain] = integration
+
 
 # Workaround for OCI SDK compatibility with Python 3.12+ (specifically 3.14)
 if "six.moves" not in sys.modules:

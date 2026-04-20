@@ -110,9 +110,9 @@ class OCIDeviceTracker(CoordinatorEntity[OCIUpdateCoordinator], TrackerEntity):
             "state": instance.lifecycle_state,
             "public_ip": instance_data.get("public_ip"),
             "private_ip": instance_data.get("private_ip"),
-            "time_created": instance.time_created.isoformat()
-            if instance.time_created
-            else None,
+            "time_created": (
+                instance.time_created.isoformat() if instance.time_created else None
+            ),
         }
 
         # Add Specs from shape_config

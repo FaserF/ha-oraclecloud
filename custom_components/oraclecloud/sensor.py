@@ -391,9 +391,11 @@ class OCISensor(CoordinatorEntity[OCIUpdateCoordinator], SensorEntity):
             name=instance.display_name,
             manufacturer="Oracle",
             model=instance.shape,
-            sw_version=f"{instance.source_details.os_name} {instance.source_details.os_version}"
-            if hasattr(instance.source_details, "os_name")
-            else None,
+            sw_version=(
+                f"{instance.source_details.os_name} {instance.source_details.os_version}"
+                if hasattr(instance.source_details, "os_name")
+                else None
+            ),
             configuration_url=f"https://cloud.oracle.com/compute/instances/{instance_id}/details?region={coordinator.config['region']}",
         )
 
