@@ -271,6 +271,19 @@ ACCOUNT_SENSORS: tuple[SensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.DATA_SIZE,
         state_class=SensorStateClass.MEASUREMENT,
     ),
+    SensorEntityDescription(
+        key="limit_arm_ocpu",
+        name="Remaining ARM OCPUs",
+        icon="mdi:cpu-64-bit",
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    SensorEntityDescription(
+        key="limit_arm_mem",
+        name="Remaining ARM Memory",
+        native_unit_of_measurement=UnitOfInformation.GIGABYTES,
+        device_class=SensorDeviceClass.DATA_SIZE,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
 )
 
 VOLUME_SENSORS: tuple[SensorEntityDescription, ...] = (
@@ -536,6 +549,14 @@ class OCIAccountSensor(CoordinatorEntity[OCIUpdateCoordinator], SensorEntity):
             return account_data.get("used_arm_ocpu")
         if self.entity_description.key == "used_arm_mem":
             return account_data.get("used_arm_mem")
+        if self.entity_description.key == "limit_arm_ocpu":
+            limit = account_data.get("limits", {}).get("standard-a1-core-count", 0.0)
+            used = account_data.get("used_arm_ocpu", 0.0)
+            return max(0, limit - used)
+        if self.entity_description.key == "limit_arm_mem":
+            limit = account_data.get("limits", {}).get("standard-a1-memory-count", 0.0)
+            used = account_data.get("used_arm_mem", 0.0)
+            return max(0, limit - used)
 
         return None
 
