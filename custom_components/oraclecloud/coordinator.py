@@ -517,8 +517,12 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             metric_names.append("NetworksBytesIn")
         elif metric_name == "NetworkBytesOut":
             metric_names.append("NetworksBytesOut")
+        elif metric_name == "DiskUtilization":
+            metric_names.append("FilesystemUtilization")
+            metric_names.append("DiskUtilizationPercentage")
 
-        # Select best namespaces
+        elif metric_name == "MemoryUtilization":
+            metric_names.append("MemoryUtilizationPercentage")
         namespaces = [
             "oci_computeagent",
             "oci_compute_infrastructure",
