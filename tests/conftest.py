@@ -1,44 +1,5 @@
 """conftest for oraclecloud tests."""
 
-# --- OCI SDK / Python 3.14+ compatibility shim ---
-# This MUST run before any test module imports coordinator.py (which imports oci).
-# The vendored urllib3 inside the oci package ships with a bundled 'six' that
-# no longer works on Python 3.14. We inject the real 'six' package into the
-# sys.modules namespace that oci expects, before oci is imported.
-import sys
-
-try:
-    import six as _six
-
-    _shim_targets = [
-        ("oci._vendor.urllib3.packages.six", _six),
-        ("oci._vendor.urllib3.packages.six.moves", _six.moves),
-    ]
-    if hasattr(_six.moves, "http_client"):
-        _shim_targets.append(
-            (
-                "oci._vendor.urllib3.packages.six.moves.http_client",
-                _six.moves.http_client,
-            )
-        )
-    if hasattr(_six.moves, "urllib"):
-        _shim_targets.append(
-            ("oci._vendor.urllib3.packages.six.moves.urllib", _six.moves.urllib)
-        )
-        if hasattr(_six.moves.urllib, "parse"):
-            _shim_targets.append(
-                (
-                    "oci._vendor.urllib3.packages.six.moves.urllib.parse",
-                    _six.moves.urllib.parse,
-                )
-            )
-    for _mod_name, _mod in _shim_targets:
-        if _mod_name not in sys.modules:
-            sys.modules[_mod_name] = _mod  # type: ignore[assignment]
-except ImportError:
-    pass  # six not installed; oci import will fail naturally
-# --------------------------------------------------
-
 import asyncio
 import contextvars
 from concurrent.futures import ThreadPoolExecutor

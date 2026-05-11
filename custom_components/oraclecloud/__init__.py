@@ -2,13 +2,33 @@
 
 from __future__ import annotations
 
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
-from homeassistant.loader import async_get_integration
+import sys
 
-from .const import DOMAIN
-from .coordinator import OCIUpdateCoordinator
+import six  # type: ignore[import-untyped]
+
+# Workaround for OCI SDK vendored urllib3/six compatibility on Python 3.14+
+# This must be applied before any 'import oci' happens.
+# Since this is in __init__.py, it will run whenever any submodule is imported.
+sys.modules["oci._vendor.urllib3.packages.six"] = six
+sys.modules["oci._vendor.urllib3.packages.six.moves"] = six.moves
+if hasattr(six.moves, "http_client"):
+    sys.modules["oci._vendor.urllib3.packages.six.moves.http_client"] = (
+        six.moves.http_client
+    )
+if hasattr(six.moves, "urllib"):
+    sys.modules["oci._vendor.urllib3.packages.six.moves.urllib"] = six.moves.urllib
+    if hasattr(six.moves.urllib, "parse"):
+        sys.modules["oci._vendor.urllib3.packages.six.moves.urllib.parse"] = (
+            six.moves.urllib.parse
+        )
+
+from homeassistant.config_entries import ConfigEntry  # noqa: E402
+from homeassistant.const import Platform  # noqa: E402
+from homeassistant.core import HomeAssistant  # noqa: E402
+from homeassistant.loader import async_get_integration  # noqa: E402
+
+from .const import DOMAIN  # noqa: E402
+from .coordinator import OCIUpdateCoordinator  # noqa: E402
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
