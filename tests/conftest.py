@@ -5,18 +5,28 @@ from unittest.mock import MagicMock
 
 # Mock oci modules to make tests independent of the real OCI library
 # and avoid import errors on Python 3.14+ without patching the source code.
-for mod in [
-    "oci",
-    "oci.core",
-    "oci.monitoring",
-    "oci.budget",
-    "oci.limits",
-    "oci.announcements_service",
-    "oci.object_storage",
-    "oci.identity",
-    "oci.exceptions",
+# We create a hierarchical mock so that sys.modules["oci.core"] is the same as oci.core.
+mock_oci = MagicMock()
+sys.modules["oci"] = mock_oci
+
+for submod in [
+    "core",
+    "monitoring",
+    "budget",
+    "limits",
+    "announcements_service",
+    "object_storage",
+    "identity",
+    "exceptions",
 ]:
-    sys.modules[mod] = MagicMock()
+    full_name = f"oci.{submod}"
+    sub_mock = MagicMock()
+    setattr(mock_oci, submod, sub_mock)
+    sys.modules[full_name] = sub_mock
+
+# Special case for monitoring.models
+mock_oci.monitoring.models = MagicMock()
+sys.modules["oci.monitoring.models"] = mock_oci.monitoring.models
 
 import asyncio  # noqa: E402
 import contextvars  # noqa: E402
