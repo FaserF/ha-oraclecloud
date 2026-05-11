@@ -9,14 +9,20 @@
   "rangeStrategy": "pin",
   "packageRules": [
     {
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchCategories": [
+        "python"
+      ],
+      "enabled": true
+    },
+    {
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "matchCurrentVersion": "!/^0/",
       "automerge": true
     }
   ],
-  "python": {
-    "enabled": true
-  },
   "github-actions": {
     "enabled": true
   }
