@@ -90,21 +90,21 @@ async def test_sensors(hass: HomeAssistant) -> None:
 
     # Test Account Sensor (Used OCPU)
     description = next(s for s in ACCOUNT_SENSORS if s.key == "used_arm_ocpu")
-    sensor = OCIAccountSensor(mock_coordinator, description)
-    assert sensor.native_value == 4.0
+    account_sensor = OCIAccountSensor(mock_coordinator, description)
+    assert account_sensor.native_value == 4.0
 
     # Test Account Sensor (Used Memory)
     description = next(s for s in ACCOUNT_SENSORS if s.key == "used_arm_mem")
-    sensor = OCIAccountSensor(mock_coordinator, description)
-    assert sensor.native_value == 24.0
+    account_sensor = OCIAccountSensor(mock_coordinator, description)
+    assert account_sensor.native_value == 24.0
 
     # Test Volume Sensor
     description = next(s for s in VOLUME_SENSORS if s.key == "volume_size")
-    sensor = OCIVolumeSensor(mock_coordinator, "vol1", description)
-    assert sensor.native_value == 50
-    assert sensor.name == "Volume Size"
+    volume_sensor = OCIVolumeSensor(mock_coordinator, "vol1", description)
+    assert volume_sensor.native_value == 50
+    assert volume_sensor.name == "Volume Size"
 
     # Test Volume Throttling Sensor
     description = next(s for s in VOLUME_SENSORS if s.key == "volume_throttled_ios")
-    sensor = OCIVolumeSensor(mock_coordinator, "vol1", description)
-    assert sensor.native_value == 0.0
+    volume_sensor = OCIVolumeSensor(mock_coordinator, "vol1", description)
+    assert volume_sensor.native_value == 0.0

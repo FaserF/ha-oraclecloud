@@ -2,8 +2,6 @@
 
 import asyncio
 import contextvars
-import sys
-import types
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -17,7 +15,7 @@ from homeassistant.core import HomeAssistant
 
 # Compatibility patch for ConfigFlowResult (missing in some earlier core versions/test environments)
 if not hasattr(homeassistant.config_entries, "ConfigFlowResult"):
-    homeassistant.config_entries.ConfigFlowResult = Any
+    homeassistant.config_entries.ConfigFlowResult = Any  # type: ignore[assignment]
 
 # Try to import INSTANCES to satisfy the plugin's cleanup check
 try:
@@ -94,7 +92,7 @@ async def fix_instance_methods(hass: HomeAssistant):
                 return orig_create_task(target)
             return current_loop.create_task(target)
 
-    hass.async_create_task = patched_create_task
+    hass.async_create_task = patched_create_task  # type: ignore[assignment]
 
     # fix async_add_job
     orig_add_job = hass.async_add_job
@@ -109,7 +107,7 @@ async def fix_instance_methods(hass: HomeAssistant):
                 return current_loop.create_task(target(*args))
             return current_loop.call_soon(target, *args)
 
-    hass.async_add_job = patched_add_job
+    hass.async_add_job = patched_add_job  # type: ignore[assignment]
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -137,7 +135,7 @@ async def mock_integration_loading(hass: HomeAssistant) -> None:
     path = Path("custom_components/oraclecloud")
 
     if not hasattr(hass, "data") or hass.data is None:
-        hass.data = {}
+        hass.data = {}  # type: ignore[assignment]
     hass.data.setdefault("custom_components", {})
     hass.data.setdefault("integrations", {})
     hass.data.setdefault("components", {})
@@ -165,9 +163,4 @@ async def mock_integration_loading(hass: HomeAssistant) -> None:
 
 
 # Workaround for OCI SDK compatibility with Python 3.12+ (specifically 3.14)
-if "six.moves" not in sys.modules:
-    six_moves = types.ModuleType("moves")
-    sys.modules["six.moves"] = six_moves
-    six = types.ModuleType("six")
-    six.moves = six_moves
-    sys.modules["six"] = six
+# Removed broken six monkeypatch that was causing issues with dateutil and other packages.

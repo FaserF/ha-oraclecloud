@@ -560,6 +560,18 @@ class OCIAccountSensor(CoordinatorEntity[OCIUpdateCoordinator], SensorEntity):
 
         return None
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return entity specific state attributes."""
+        account_data = self.coordinator.data.get("account", {})
+        if not account_data:
+            return {}
+
+        if self.entity_description.key == "announcements_count":
+            return {"announcements": account_data.get("announcement_details", [])}
+
+        return {}
+
 
 class OCIVolumeSensor(CoordinatorEntity[OCIUpdateCoordinator], SensorEntity):
     """Representation of an OCI Volume sensor."""

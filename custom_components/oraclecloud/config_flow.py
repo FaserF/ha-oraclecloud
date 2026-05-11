@@ -71,7 +71,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     return {"title": title}
 
 
-class OracleCloudConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore
+class OracleCloudConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Oracle Cloud Infrastructure."""
 
     VERSION = 1

@@ -412,6 +412,15 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             ).data
             # AnnouncementsCollection has an 'items' attribute which is the list
             account_data["announcements"] = len(announcements.items)
+            account_data["announcement_details"] = [
+                {
+                    "title": a.summary,
+                    "type": a.announcement_type,
+                    "time": a.time_one_value.isoformat() if a.time_one_value else None,
+                    "reference_ticket": a.reference_ticket_number,
+                }
+                for a in announcements.items
+            ]
         except Exception as err:
             LOGGER.error("Failed to fetch announcements: %s", err)
 
