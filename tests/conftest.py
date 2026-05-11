@@ -1,11 +1,28 @@
 """conftest for oraclecloud tests."""
 
+import sys
+from unittest.mock import MagicMock
+
+# Mock oci modules to make tests independent of the real OCI library
+# and avoid import errors on Python 3.14+ without patching the source code.
+for mod in [
+    "oci",
+    "oci.core",
+    "oci.monitoring",
+    "oci.budget",
+    "oci.limits",
+    "oci.announcements_service",
+    "oci.object_storage",
+    "oci.identity",
+    "oci.exceptions",
+]:
+    sys.modules[mod] = MagicMock()
+
 import asyncio
 import contextvars
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
 
 import homeassistant.config_entries
 import homeassistant.core as ha
@@ -63,23 +80,9 @@ def event_loop():
 
 @pytest.fixture(autouse=True)
 async def fix_instance_methods(hass: HomeAssistant):
-    """Fix methods that the plugin might have monkeypatched onto the instance."""
-
+    """Ensure the instance has the right loop."""
     current_loop = asyncio.get_running_loop()
     hass.loop = current_loop
-
-    # Make stop methods no-ops but remove ALL occurrences from INSTANCES to satisfy tracker
-    async def async_stop_mock(*args, **kwargs):
-        while hass in INSTANCES:
-            INSTANCES.remove(hass)
-
-    hass.async_stop = async_stop_mock
-
-    def stop_mock(*args, **kwargs):
-        while hass in INSTANCES:
-            INSTANCES.remove(hass)
-
-    hass.stop = stop_mock
 
     # fix async_create_task to be permissive and use the right loop
     orig_create_task = hass.async_create_task
