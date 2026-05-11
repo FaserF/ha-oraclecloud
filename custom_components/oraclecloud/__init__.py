@@ -9,18 +9,45 @@ import six  # type: ignore[import-untyped]
 # Workaround for OCI SDK vendored urllib3/six compatibility on Python 3.14+
 # This must be applied before any 'import oci' happens.
 # Since this is in __init__.py, it will run whenever any submodule is imported.
-sys.modules["oci._vendor.urllib3.packages.six"] = six
-sys.modules["oci._vendor.urllib3.packages.six.moves"] = six.moves
+_shim_targets = [
+    ("oci._vendor.urllib3.packages.six", six),
+    ("oci._vendor.urllib3.packages.six.moves", six.moves),
+    ("oci._vendor.six", six),
+    ("oci._vendor.six.moves", six.moves),
+]
 if hasattr(six.moves, "http_client"):
-    sys.modules["oci._vendor.urllib3.packages.six.moves.http_client"] = (
-        six.moves.http_client
+    _shim_targets.extend(
+        [
+            (
+                "oci._vendor.urllib3.packages.six.moves.http_client",
+                six.moves.http_client,
+            ),
+            ("oci._vendor.six.moves.http_client", six.moves.http_client),
+        ]
     )
 if hasattr(six.moves, "urllib"):
-    sys.modules["oci._vendor.urllib3.packages.six.moves.urllib"] = six.moves.urllib
+    _shim_targets.extend(
+        [
+            ("oci._vendor.urllib3.packages.six.moves.urllib", six.moves.urllib),
+            ("oci._vendor.six.moves.urllib", six.moves.urllib),
+        ]
+    )
     if hasattr(six.moves.urllib, "parse"):
-        sys.modules["oci._vendor.urllib3.packages.six.moves.urllib.parse"] = (
-            six.moves.urllib.parse
+        _shim_targets.extend(
+            [
+                (
+                    "oci._vendor.urllib3.packages.six.moves.urllib.parse",
+                    six.moves.urllib.parse,
+                ),
+                ("oci._vendor.six.moves.urllib.parse", six.moves.urllib.parse),
+            ]
         )
+if hasattr(six.moves, "queue"):
+    _shim_targets.append(("oci._vendor.six.moves.queue", six.moves.queue))
+
+for mod_name, mod in _shim_targets:
+    if mod_name not in sys.modules:
+        sys.modules[mod_name] = mod
 
 from homeassistant.config_entries import ConfigEntry  # noqa: E402
 from homeassistant.const import Platform  # noqa: E402
