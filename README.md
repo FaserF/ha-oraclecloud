@@ -16,8 +16,6 @@ Monitor and manage your Oracle Cloud Infrastructure (OCI) Free Tier virtual mach
 | [🧱 Entities](#-entities) | [📖 Automations](#-automation-examples) | [❓ FAQ](#-troubleshooting--faq) | [🧑‍💻 Development](#-development) |
 | [💖 Support](#️-support-this-project) | [📄 License](#-license) | | |
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FaserF&repository=ha-oraclecloud&category=integration)
-
 ### Why use this integration?
 Oracle Cloud's Always Free tier is highly popular for hosting OpenClaw or HA companion services (like VPNs, databases, or game servers). This integration provides **native monitoring** via the OCI SDK, allowing you to track CPU/Memory/Network usage and control your instances (Start/Stop/Reboot) directly from your Home Assistant dashboard.
 
@@ -64,6 +62,9 @@ No manual script-polling or complex setup is required — everything is handled 
 
 ### HACS (Recommended)
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FaserF&repository=ha-oraclecloud&category=integration)
+
+
 1. Open HACS in Home Assistant.
 2. Click the three dots -> **Custom repositories**.
 3. Add `FaserF/ha-oraclecloud` with category **Integration**.
@@ -94,6 +95,10 @@ The integration requires an API Key to communicate with Oracle Cloud.
    - `region` (e.g., `eu-frankfurt-1`)
 
 ### 2. Home Assistant Integration Setup
+
+[![Add to Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=oraclecloud)
+
+
 1. Go to **Settings > Devices & Services**.
 2. Click **Add Integration** and search for **Oracle Cloud Infrastructure**.
 3. Fill in the fields using the values from Step 1.

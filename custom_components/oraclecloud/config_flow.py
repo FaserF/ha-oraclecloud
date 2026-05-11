@@ -9,8 +9,13 @@ import voluptuous as vol
 if TYPE_CHECKING:
     pass
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
@@ -103,3 +108,57 @@ class OracleCloudConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: ConfigEntry,
+    ) -> OracleCloudOptionsFlowHandler:
+        """Get the options flow for this handler."""
+        return OracleCloudOptionsFlowHandler(config_entry)
+
+
+class OracleCloudOptionsFlowHandler(OptionsFlow):
+    """Handle OCI options."""
+
+    def __init__(self, config_entry: ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage the options."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                await validate_input(self.hass, user_input)
+                # Update the entry data instead of options, as these are core config values
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry, data=user_input
+                )
+                return self.async_create_entry(title="", data={})
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except InvalidAuth:
+                errors["base"] = "invalid_auth"
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown"
+
+        # Pre-populate schema with current values
+        data = self.config_entry.data
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_TENANCY, default=data.get(CONF_TENANCY)): str,
+                vol.Required(CONF_USER, default=data.get(CONF_USER)): str,
+                vol.Required(CONF_FINGERPRINT, default=data.get(CONF_FINGERPRINT)): str,
+                vol.Required(CONF_REGION, default=data.get(CONF_REGION)): str,
+                vol.Required(CONF_KEY_CONTENT, default=data.get(CONF_KEY_CONTENT)): str,
+                vol.Optional(
+                    CONF_COMPARTMENT, default=data.get(CONF_COMPARTMENT, "")
+                ): str,
+            }
+        )
+
+        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
