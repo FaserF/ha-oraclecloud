@@ -87,7 +87,7 @@ async def fix_instance_methods(hass: HomeAssistant):
     def patched_create_task(target, name=None, **kwargs):
         try:
             return orig_create_task(target, name=name, **kwargs)
-        except (TypeError, AttributeError):
+        except TypeError, AttributeError:
             if isinstance(orig_create_task, MagicMock):
                 return orig_create_task(target)
             return current_loop.create_task(target)
@@ -100,7 +100,7 @@ async def fix_instance_methods(hass: HomeAssistant):
     def patched_add_job(target, *args, **kwargs):
         try:
             return orig_add_job(target, *args, **kwargs)
-        except (TypeError, AttributeError):
+        except TypeError, AttributeError:
             if isinstance(orig_add_job, MagicMock):
                 return orig_add_job(target)
             if asyncio.iscoroutine(target) or asyncio.iscoroutinefunction(target):
