@@ -18,17 +18,17 @@ for mod in [
 ]:
     sys.modules[mod] = MagicMock()
 
-import asyncio
-import contextvars
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
-from typing import Any
+import asyncio  # noqa: E402
+import contextvars  # noqa: E402
+from concurrent.futures import ThreadPoolExecutor  # noqa: E402
+from pathlib import Path  # noqa: E402
+from typing import Any  # noqa: E402
 
-import homeassistant.config_entries
-import homeassistant.core as ha
-import pytest
-from homeassistant import loader
-from homeassistant.core import HomeAssistant
+import homeassistant.config_entries  # noqa: E402
+import homeassistant.core as ha  # noqa: E402
+import pytest  # noqa: E402
+from homeassistant import loader  # noqa: E402
+from homeassistant.core import HomeAssistant  # noqa: E402
 
 # Compatibility patch for ConfigFlowResult (missing in some earlier core versions/test environments)
 if not hasattr(homeassistant.config_entries, "ConfigFlowResult"):
@@ -41,7 +41,7 @@ except ImportError:
     INSTANCES = []
 
 # Suppress frame reporting which causes RuntimeError on Python 3.14 during tests
-import homeassistant.helpers.frame
+import homeassistant.helpers.frame  # noqa: E402
 
 homeassistant.helpers.frame.report = lambda *args, **kwargs: None
 
