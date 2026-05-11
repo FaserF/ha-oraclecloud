@@ -115,7 +115,9 @@ class OCIBudgetAlertBinarySensor(
             identifiers={(DOMAIN, f"{self.coordinator.config['tenancy']}_account")},
             name=f"OCI Account ({self.coordinator.username})",
             manufacturer="Oracle",
+            model="Oracle Cloud Account",
             entry_type=DeviceEntryType.SERVICE,
+            configuration_url=f"https://cloud.oracle.com/identity/domains/my-profile?tenant={self.coordinator.tenancy_name}&domain=Default&region={self.coordinator.config['region']}",
         )
 
     @property

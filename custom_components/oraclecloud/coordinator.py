@@ -52,6 +52,7 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.compartment_id = (
             entry.data.get(CONF_COMPARTMENT) or entry.data[CONF_TENANCY]
         )
+        self.tenancy_name = entry.title
         self.compute_client: oci.core.ComputeClient | None = None
         self.monitoring_client: oci.monitoring.MonitoringClient | None = None
         self.network_client: oci.core.VirtualNetworkClient | None = None
