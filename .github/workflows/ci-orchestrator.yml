@@ -41,8 +41,8 @@ jobs:
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements_test.txt ]; then pip install -r requirements_test.txt; fi
-          pip install ruff black
+          if [ -f requirements_test.txt ]; then python -m pip install -r requirements_test.txt; fi
+          python -m pip install ruff black pytest pytest-asyncio pytest-cov homeassistant oci pytest-homeassistant-custom-component
 
       - name: Lint Python
         run: |
@@ -51,7 +51,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          pytest
+          python -m pytest
 
 
 
