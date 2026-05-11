@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from homeassistant import config_entries, data_entry_flow
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import (
-    MockConfigConfigEntry as MockConfigEntry,
+    MockConfigEntry,
 )
 
 from custom_components.oraclecloud.const import DOMAIN
