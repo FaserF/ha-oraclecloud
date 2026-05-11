@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from homeassistant import config_entries, data_entry_flow
 from homeassistant.core import HomeAssistant
+from pytest_homeassistant_custom_component.common import MockConfigConfigEntry as MockConfigEntry
 
 from custom_components.oraclecloud.const import DOMAIN
 
@@ -62,8 +63,8 @@ async def test_options_flow(hass: HomeAssistant) -> None:
         "custom_components.oraclecloud.config_flow.validate_input",
         return_value={"title": "OCI (ocid1.te...)"},
     ):
-        # We need a real config entry to test options flow
-        entry = config_entries.ConfigEntry(
+        # Use MockConfigEntry to test options flow
+        entry = MockConfigEntry(
             version=1,
             domain=DOMAIN,
             title="OCI",
@@ -72,7 +73,8 @@ async def test_options_flow(hass: HomeAssistant) -> None:
             options={},
             entry_id="test",
         )
-        # Manually add entry to hass if needed, or just test the handler
+        # Manually add entry to hass
+        entry.add_to_hass(hass)
         from custom_components.oraclecloud.config_flow import (
             OracleCloudOptionsFlowHandler,
         )
