@@ -13,7 +13,7 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - uses: actions/labeler@v6
+      - uses: actions/labeler@v6.1.0
         if: github.event_name == 'pull_request_target'
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
@@ -21,7 +21,7 @@ jobs:
 
       - name: Label Issues
         if: github.event_name == 'issues'
-        uses: actions/github-script@v9
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             const issue = context.payload.issue;
