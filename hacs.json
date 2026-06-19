@@ -1,4 +1,6 @@
 {
   "name": "Oracle Cloud Infrastructure",
-  "render_readme": true
+  "render_readme": true,
+  "zip_release": true,
+  "filename": "oraclecloud.zip"
 }
