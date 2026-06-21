@@ -14,16 +14,6 @@ permissions:
   actions: read
 
 jobs:
-  labeler:
-    name: Label PR
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/labeler@v6.1.0
-        with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
-          configuration-path: .github/labeler.yml
-
   lint-test:
     name: Lint & Test
     runs-on: ubuntu-latest
@@ -34,23 +24,58 @@ jobs:
         uses: actions/setup-python@v6.2.0
         with:
           python-version: '3.14.6'
+          cache: "pip"
 
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements_test.txt ]; then python -m pip install -r requirements_test.txt; fi
-          python -m pip install ruff black pytest pytest-asyncio pytest-cov homeassistant oci pytest-homeassistant-custom-component
+          if [ -f requirements_test.txt ]; then pip install -r requirements_test.txt; fi
+          pip install ruff mypy pyyaml pytest pytest-asyncio pytest-cov homeassistant paramiko aiohttp
 
-      - name: Lint Python
+      - name: Validate JSON/YAML
         run: |
-          black --check .
-          ruff check .
+          python -c "import json, glob; [json.load(open(f, encoding='utf-8-sig')) for f in glob.glob('**/*.json', recursive=True)]"
+          python -c "import yaml, glob; yaml.add_multi_constructor('tag:yaml.org,2002:python/name:', lambda loader, suffix, node: None, Loader=yaml.SafeLoader); [yaml.safe_load(open(f, encoding='utf-8-sig')) for f in glob.glob('**/*.yaml', recursive=True) + glob.glob('**/*.yml', recursive=True)]"
+
+      - name: Check Integration Structure
+        run: |
+          DOMAIN=$(python -c "import json, glob; print(json.load(open(glob.glob('custom_components/*/manifest.json')[0]))['domain'])")
+          test -d "custom_components/$DOMAIN"
+          test -f "custom_components/$DOMAIN/manifest.json"
+          test -f hacs.json
+
+      - name: Format and Fix with Ruff
+        run: |
+          ruff check --fix .
+          ruff format .
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v7.1.0
+        with:
+          commit_message: "style: auto-fix and format with Ruff [skip ci]"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run Mypy
+        run: |
+          DOMAIN=$(python -c "import json, glob; print(json.load(open(glob.glob('custom_components/*/manifest.json')[0]))['domain'])")
+          mypy "custom_components/$DOMAIN"
 
       - name: Run Tests
         run: |
-          python -m pytest
+          if [ -d tests ]; then
+            DOMAIN=$(python -c "import json, glob; print(json.load(open(glob.glob('custom_components/*/manifest.json')[0]))['domain'])")
+            pytest --cov="custom_components.$DOMAIN" --cov-report=xml
+          else
+            echo "No tests directory found, skipping."
+            echo "<?xml version='1.0' ?><coverage></coverage>" > coverage.xml
+          fi
 
-
+      - name: Upload coverage
+        uses: codecov/codecov-action@v7.0.0
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
 
   hassfest:
     name: Validate with Hassfest
