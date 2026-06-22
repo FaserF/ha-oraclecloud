@@ -214,7 +214,8 @@ jobs:
 
       - name: 📦 Zip Component
         run: |
-          zip -r oraclecloud.zip custom_components/oraclecloud
+          cd custom_components/oraclecloud
+          zip -r ../../oraclecloud.zip .
 
       - name: Download Release Body Artifact
         uses: actions/download-artifact@v8
