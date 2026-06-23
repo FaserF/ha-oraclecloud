@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 import importlib
+import warnings
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import oci
+
+# Suppress urllib3 strict parameter warning from OCI SDK
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    module="urllib3",
+    message=".*strict.*",
+)
 
 if TYPE_CHECKING:
     import oci.announcements_service
