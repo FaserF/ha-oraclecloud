@@ -1,6 +1,7 @@
 # <img src="custom_components/oraclecloud/brand/logo.png" height="50"> Oracle Cloud Infrastructure (OCI) for Home Assistant
 
 [![GitHub Release](https://img.shields.io/github/release/FaserF/ha-oraclecloud.svg?style=flat-square)](https://github.com/FaserF/ha-oraclecloud/releases)
+[![Downloads (Current release)](https://img.shields.io/github/downloads/FaserF/ha-oraclecloud/latest/oraclecloud.zip?label=Downloads%20(Current%20release)&style=flat-square)](https://github.com/FaserF/ha-oraclecloud/releases)
 [![License](https://img.shields.io/github/license/FaserF/ha-oraclecloud.svg?style=flat-square)](LICENSE)
 [![hacs](https://img.shields.io/badge/HACS-custom-orange.svg?style=flat-square)](https://hacs.xyz)
 [![CI Orchestrator](https://github.com/FaserF/ha-oraclecloud/actions/workflows/ci-orchestrator.yml/badge.svg)](https://github.com/FaserF/ha-oraclecloud/actions/workflows/ci-orchestrator.yml)
