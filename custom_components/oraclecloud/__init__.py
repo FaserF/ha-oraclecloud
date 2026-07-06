@@ -27,15 +27,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         needs_install = False
         try:
             import oci
-            if oci.__version__ != "2.181.0.post1":
+            if oci.__version__ != "2.181.0.post2":
                 needs_install = True
         except ImportError:
             needs_install = True
 
         if needs_install:
             subprocess.run([
-                sys.executable, "-m", "pip", "install", "--quiet", "--upgrade",
-                "git+https://github.com/FaserF/oci-python-sdk.git@28f956c93fd7d1718a5deaf49d25f900b2b280b4#oci"
+                sys.executable, "-m", "pip", "install", "--quiet",
+                "--upgrade", "--upgrade-strategy", "eager",
+                "git+https://github.com/FaserF/oci-python-sdk.git@65ccb1f4e13a5824749c8db469ce7b4ab596d652#oci"
             ], check=True)
             # Purge cached oci modules so Python loads the freshly installed version
             for mod in list(sys.modules.keys()):

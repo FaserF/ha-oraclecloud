@@ -13,7 +13,7 @@
     "oraclecloud"
   ],
   "requirements": [
-    "git+https://github.com/FaserF/oci-python-sdk.git@28f956c93fd7d1718a5deaf49d25f900b2b280b4#oci"
+    "git+https://github.com/FaserF/oci-python-sdk.git@65ccb1f4e13a5824749c8db469ce7b4ab596d652#oci"
   ],
   "version": "1.1.2-dev0"
 }
