@@ -376,7 +376,10 @@ def main():
         if collapse:
             for i in range(MAX_PER_SECTION):
                 formatted = get_formatted_item(
-                    bucket_items[i]["display"], bucket_items[i]["hashes"], repo, commit_authors
+                    bucket_items[i]["display"],
+                    bucket_items[i]["hashes"],
+                    repo,
+                    commit_authors,
                 )
                 out.append(f"- {formatted}")
             remaining = len(bucket_items) - MAX_PER_SECTION
@@ -386,7 +389,10 @@ def main():
             out.append("")
             for i in range(MAX_PER_SECTION, len(bucket_items)):
                 formatted = get_formatted_item(
-                    bucket_items[i]["display"], bucket_items[i]["hashes"], repo, commit_authors
+                    bucket_items[i]["display"],
+                    bucket_items[i]["hashes"],
+                    repo,
+                    commit_authors,
                 )
                 out.append(f"- {formatted}")
             out.append("")
