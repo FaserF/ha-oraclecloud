@@ -20,6 +20,7 @@ PLATFORMS: list[Platform] = [
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Oracle Cloud Infrastructure from a config entry."""
+
     def check_and_install_oci() -> None:
         import subprocess
         import sys
@@ -27,17 +28,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         needs_install = False
         try:
             import oci
+
             if oci.__version__ != "2.181.0.post2":
                 needs_install = True
         except ImportError:
             needs_install = True
 
         if needs_install:
-            subprocess.run([
-                sys.executable, "-m", "pip", "install", "--quiet",
-                "--upgrade", "--upgrade-strategy", "eager",
-                "git+https://github.com/FaserF/oci-python-sdk.git@65ccb1f4e13a5824749c8db469ce7b4ab596d652#oci"
-            ], check=True)
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--quiet",
+                    "--upgrade",
+                    "--upgrade-strategy",
+                    "eager",
+                    "git+https://github.com/FaserF/oci-python-sdk.git@65ccb1f4e13a5824749c8db469ce7b4ab596d652#oci",
+                ],
+                check=True,
+            )
             # Purge cached oci modules so Python loads the freshly installed version
             for mod in list(sys.modules.keys()):
                 if mod == "oci" or mod.startswith("oci."):
