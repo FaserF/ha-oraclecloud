@@ -7,7 +7,6 @@ import importlib
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.loader import async_get_integration
 
 from .const import DOMAIN
 
