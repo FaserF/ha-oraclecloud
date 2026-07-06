@@ -35,8 +35,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Pre-load diagnostics platform to avoid blocking import warning
     try:
-        integration = await async_get_integration(hass, DOMAIN)
-        hass.async_create_task(integration.async_get_platform("diagnostics"))
+        await hass.async_add_import_executor_job(
+            importlib.import_module, "custom_components.oraclecloud.diagnostics"
+        )
     except Exception:
         pass
 
