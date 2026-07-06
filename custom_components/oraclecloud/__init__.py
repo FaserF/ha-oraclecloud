@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import importlib
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.loader import async_get_integration
 
 from .const import DOMAIN
-from .coordinator import OCIUpdateCoordinator
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
@@ -20,6 +21,11 @@ PLATFORMS: list[Platform] = [
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Oracle Cloud Infrastructure from a config entry."""
+    await hass.async_add_import_executor_job(
+        importlib.import_module, "custom_components.oraclecloud.coordinator"
+    )
+    from .coordinator import OCIUpdateCoordinator
+
     coordinator = OCIUpdateCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
 
