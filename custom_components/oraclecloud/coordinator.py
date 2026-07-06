@@ -9,14 +9,6 @@ from typing import TYPE_CHECKING, Any
 
 import oci
 
-# Suppress urllib3 strict parameter warning from OCI SDK
-warnings.filterwarnings(
-    "ignore",
-    category=FutureWarning,
-    module="urllib3",
-    message=".*strict.*",
-)
-
 if TYPE_CHECKING:
     import oci.announcements_service
     import oci.budget
@@ -38,6 +30,14 @@ from .const import (
     CONF_USER,
     DOMAIN,
     LOGGER,
+)
+
+# Suppress urllib3 strict parameter warning from OCI SDK
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    module="urllib3",
+    message=".*strict.*",
 )
 
 
