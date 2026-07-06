@@ -109,6 +109,47 @@ class OracleCloudConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
         )
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle reconfiguration of the integration."""
+        errors: dict[str, str] = {}
+        reconfigure_entry = self._get_reconfigure_entry()
+
+        if user_input is not None:
+            try:
+                await validate_input(self.hass, user_input)
+                return self.async_update_reload_and_abort(
+                    reconfigure_entry,
+                    data_updates=user_input,
+                )
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except InvalidAuth:
+                errors["base"] = "invalid_auth"
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown"
+
+        # Pre-populate schema with current config entry values
+        data = reconfigure_entry.data
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_TENANCY, default=data.get(CONF_TENANCY)): str,
+                vol.Required(CONF_USER, default=data.get(CONF_USER)): str,
+                vol.Required(CONF_FINGERPRINT, default=data.get(CONF_FINGERPRINT)): str,
+                vol.Required(CONF_REGION, default=data.get(CONF_REGION)): str,
+                vol.Required(CONF_KEY_CONTENT, default=data.get(CONF_KEY_CONTENT)): str,
+                vol.Optional(
+                    CONF_COMPARTMENT, default=data.get(CONF_COMPARTMENT, "")
+                ): str,
+            }
+        )
+
+        return self.async_show_form(
+            step_id="reconfigure", data_schema=schema, errors=errors
+        )
+
     @staticmethod
     @callback
     def async_get_options_flow(

@@ -12,6 +12,18 @@
           "key_content": "Privater Schlüssel (PEM-Format)",
           "compartment": "Compartment OCID (optional)"
         }
+      },
+      "reconfigure": {
+        "title": "OCI API Zugangsdaten neu konfigurieren",
+        "description": "Aktualisiere Deine Oracle Cloud Infrastructure API-Zugangsdaten.",
+        "data": {
+          "tenancy": "Tenancy OCID",
+          "user": "Benutzer OCID",
+          "fingerprint": "Fingerabdruck",
+          "region": "Region (z.B. eu-frankfurt-1)",
+          "key_content": "Privater Schlüssel (PEM-Format)",
+          "compartment": "Compartment OCID (optional)"
+        }
       }
     },
     "error": {
@@ -20,7 +32,8 @@
       "unknown": "Unerwarteter Fehler"
     },
     "abort": {
-      "already_configured": "Gerät ist bereits konfiguriert"
+      "already_configured": "Gerät ist bereits konfiguriert",
+      "reconfigure_successful": "Neukonfiguration war erfolgreich"
     }
   },
   "entity": {

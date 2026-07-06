@@ -12,6 +12,18 @@
           "key_content": "Private Key (PEM format)",
           "compartment": "Compartment OCID (optional)"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure OCI API Credentials",
+        "description": "Update your Oracle Cloud Infrastructure API credentials.",
+        "data": {
+          "tenancy": "Tenancy OCID",
+          "user": "User OCID",
+          "fingerprint": "Fingerprint",
+          "region": "Region (e.g., eu-frankfurt-1)",
+          "key_content": "Private Key (PEM format)",
+          "compartment": "Compartment OCID (optional)"
+        }
       }
     },
     "error": {
@@ -20,7 +32,8 @@
       "unknown": "Unexpected error"
     },
     "abort": {
-      "already_configured": "Device is already configured"
+      "already_configured": "Device is already configured",
+      "reconfigure_successful": "Re-configuration was successful"
     }
   },
   "entity": {

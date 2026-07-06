@@ -95,3 +95,63 @@ async def test_options_flow(hass: HomeAssistant) -> None:
             result = await handler.async_step_init(new_data)
             assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
             mock_update.assert_called_once_with(entry, data=new_data)
+
+
+async def test_reconfigure_flow_shows_form(hass: HomeAssistant) -> None:
+    """Test that the reconfigure step shows a pre-populated form."""
+    entry = MockConfigEntry(
+        version=1,
+        domain=DOMAIN,
+        title="OCI",
+        data=MOCK_DATA,
+        source=config_entries.SOURCE_USER,
+        options={},
+        entry_id="test",
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_RECONFIGURE, "entry_id": entry.entry_id},
+    )
+
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+
+
+@patch("custom_components.oraclecloud.config_flow.validate_input")
+async def test_reconfigure_flow_success(
+    mock_validate: Any, hass: HomeAssistant
+) -> None:
+    """Test a successful reconfiguration."""
+    mock_validate.return_value = {"title": "OCI (ocid1.te...)"}
+
+    entry = MockConfigEntry(
+        version=1,
+        domain=DOMAIN,
+        title="OCI",
+        data=MOCK_DATA,
+        source=config_entries.SOURCE_USER,
+        options={},
+        entry_id="test",
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": config_entries.SOURCE_RECONFIGURE, "entry_id": entry.entry_id},
+    )
+    assert result["step_id"] == "reconfigure"
+
+    new_data = MOCK_DATA.copy()
+    new_data["region"] = "eu-frankfurt-1"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        new_data,
+    )
+
+    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data["region"] == "eu-frankfurt-1"
+
