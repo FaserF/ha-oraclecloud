@@ -373,11 +373,45 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 LOGGER.debug("Failed to fetch buckets: %s", err)
                 return []
 
-        with ThreadPoolExecutor(max_workers=4) as acc_exec:
+        def _fetch_volumes():
+            if not self.blockstorage_client:
+                return []
+            try:
+                vols = self.blockstorage_client.list_volumes(
+                    compartment_id=self.compartment_id
+                ).data
+                res = []
+                for vol in vols:
+                    if vol.lifecycle_state == "TERMINATED":
+                        continue
+                    # Fetch throttled IOs metric if available
+                    throttled_ios = self._get_metric(
+                        "VolumeThrottledIOs",
+                        vol.id,
+                        datetime.now(UTC) - timedelta(minutes=10),
+                        datetime.now(UTC),
+                        vol.compartment_id,
+                    )
+                    res.append(
+                        {
+                            "id": vol.id,
+                            "display_name": vol.display_name,
+                            "size_in_gbs": vol.size_in_gbs,
+                            "lifecycle_state": vol.lifecycle_state,
+                            "volume_throttled_ios": throttled_ios,
+                        }
+                    )
+                return res
+            except Exception as err:
+                LOGGER.debug("Failed to fetch volumes: %s", err)
+                return []
+
+        with ThreadPoolExecutor(max_workers=5) as acc_exec:
             future_budget = acc_exec.submit(_fetch_budget)
             future_limits = acc_exec.submit(_fetch_limits)
             future_announcements = acc_exec.submit(_fetch_announcements)
             future_buckets = acc_exec.submit(_fetch_buckets)
+            future_volumes = acc_exec.submit(_fetch_volumes)
 
             budget_res = future_budget.result()
             if budget_res:
@@ -390,6 +424,7 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             account_data["announcement_details"] = ann_details
 
             account_data["buckets"] = future_buckets.result()
+            account_data["volumes"] = future_volumes.result()
 
         # Calculate total used ARM resources
         total_used_arm_ocpu = 0.0
