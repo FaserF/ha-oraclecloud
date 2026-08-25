@@ -181,139 +181,53 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 except Exception:
                     vnic_id = None
 
-            # Get Metrics
+            # Get Metrics concurrently to speed up collection
             end_time = datetime.now(UTC)
             start_time = end_time - timedelta(minutes=10)
 
-            cpu = self._get_metric(
-                "CpuUtilization",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
-            mem = self._get_metric(
-                "MemoryUtilization",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
-            disk = self._get_metric(
-                "DiskUtilization",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
-            net_in = self._get_metric(
-                "NetworkBytesIn",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
-            net_out = self._get_metric(
-                "NetworkBytesOut",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
+            metric_defs = {
+                "cpu": ("CpuUtilization", instance_id),
+                "mem": ("MemoryUtilization", instance_id),
+                "disk": ("DiskUtilization", instance_id),
+                "net_in": ("NetworkBytesIn", instance_id),
+                "net_out": ("NetworkBytesOut", instance_id),
+                "net_throttle_in": ("VnicIngressDropsThrottle", vnic_id) if vnic_id else None,
+                "net_throttle_out": ("VnicEgressDropsThrottle", vnic_id) if vnic_id else None,
+                "vnic_conntrack": ("VnicConntrackUtilPercent", vnic_id) if vnic_id else None,
+                "disk_read_bytes": ("DiskBytesRead", instance_id),
+                "disk_write_bytes": ("DiskBytesWritten", instance_id),
+                "disk_read_iops": ("DiskIopsRead", instance_id),
+                "disk_write_iops": ("DiskIopsWritten", instance_id),
+                "net_drop_in": ("NetworkDropIn", instance_id),
+                "net_drop_out": ("NetworkDropOut", instance_id),
+                "net_err_in": ("NetworkErrorIn", instance_id),
+                "net_err_out": ("NetworkErrorOut", instance_id),
+                "load_avg": ("LoadAverage", instance_id),
+            }
 
-            # Get Throttling Metrics (Need VNIC ID for oci_vcn namespace)
-            net_throttle_in = None
-            net_throttle_out = None
-            vnic_conntrack = None
-            if vnic_id:
-                net_throttle_in = self._get_metric(
-                    "VnicIngressDropsThrottle",
-                    vnic_id,
-                    start_time,
-                    end_time,
-                    instance.compartment_id,
-                )
-                net_throttle_out = self._get_metric(
-                    "VnicEgressDropsThrottle",
-                    vnic_id,
-                    start_time,
-                    end_time,
-                    instance.compartment_id,
-                )
-                vnic_conntrack = self._get_metric(
-                    "VnicConntrackUtilPercent",
-                    vnic_id,
-                    start_time,
-                    end_time,
-                    instance.compartment_id,
-                )
+            from concurrent.futures import ThreadPoolExecutor
 
-            # Get Extended Metrics
-            disk_read_bytes = self._get_metric(
-                "DiskBytesRead",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
-            disk_write_bytes = self._get_metric(
-                "DiskBytesWritten",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
-            disk_read_iops = self._get_metric(
-                "DiskIopsRead",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
-            disk_write_iops = self._get_metric(
-                "DiskIopsWritten",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
-
-            net_drop_in = self._get_metric(
-                "NetworkDropIn",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
-            net_drop_out = self._get_metric(
-                "NetworkDropOut",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
-            net_err_in = self._get_metric(
-                "NetworkErrorIn",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
-            net_err_out = self._get_metric(
-                "NetworkErrorOut",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
-
-            load_avg = self._get_metric(
-                "LoadAverage",
-                instance_id,
-                start_time,
-                end_time,
-                instance.compartment_id,
-            )
+            metrics_res: dict[str, Any] = {}
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                future_to_key = {
+                    executor.submit(
+                        self._get_metric,
+                        metric_name,
+                        target_id,
+                        start_time,
+                        end_time,
+                        instance.compartment_id,
+                    ): key
+                    for key, val in metric_defs.items()
+                    if val is not None
+                    for metric_name, target_id in [val]
+                }
+                for future in future_to_key:
+                    k = future_to_key[future]
+                    try:
+                        metrics_res[k] = future.result()
+                    except Exception:
+                        metrics_res[k] = None
 
             results[instance_id] = {
                 "instance": instance,
@@ -323,23 +237,23 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "vnic_id": vnic_id,
                 "os_name": os_name,
                 "os_version": os_version,
-                "cpu_utilization": cpu,
-                "memory_utilization": mem,
-                "disk_utilization": disk,
-                "network_bytes_in": net_in,
-                "network_bytes_out": net_out,
-                "disk_bytes_read": disk_read_bytes,
-                "disk_bytes_written": disk_write_bytes,
-                "disk_iops_read": disk_read_iops,
-                "disk_iops_written": disk_write_iops,
-                "network_drop_in": net_drop_in,
-                "network_drop_out": net_drop_out,
-                "network_error_in": net_err_in,
-                "network_error_out": net_err_out,
-                "load_average": load_avg,
-                "network_throttle_in": net_throttle_in,
-                "network_throttle_out": net_throttle_out,
-                "vnic_conntrack_utilization": vnic_conntrack,
+                "cpu_utilization": metrics_res.get("cpu"),
+                "memory_utilization": metrics_res.get("mem"),
+                "disk_utilization": metrics_res.get("disk"),
+                "network_bytes_in": metrics_res.get("net_in"),
+                "network_bytes_out": metrics_res.get("net_out"),
+                "disk_bytes_read": metrics_res.get("disk_read_bytes"),
+                "disk_bytes_written": metrics_res.get("disk_write_bytes"),
+                "disk_iops_read": metrics_res.get("disk_read_iops"),
+                "disk_iops_written": metrics_res.get("disk_write_iops"),
+                "network_drop_in": metrics_res.get("net_drop_in"),
+                "network_drop_out": metrics_res.get("net_drop_out"),
+                "network_error_in": metrics_res.get("net_err_in"),
+                "network_error_out": metrics_res.get("net_err_out"),
+                "load_average": metrics_res.get("load_avg"),
+                "network_throttle_in": metrics_res.get("net_throttle_in"),
+                "network_throttle_out": metrics_res.get("net_throttle_out"),
+                "vnic_conntrack_utilization": metrics_res.get("vnic_conntrack"),
             }
 
         # Fetch Account-Wide Metrics (Budgets, Limits, Announcements)
