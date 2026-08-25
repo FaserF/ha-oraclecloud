@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from .const import DOMAIN, REQUIRED_OCI_GIT_REF, REQUIRED_OCI_VERSION
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
@@ -28,25 +28,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         _LOGGER = logging.getLogger(__name__)
 
-        # Targeted version of your custom fork
-        REQUIRED_OCI_VERSION = "2.181.0.post3"
         needs_install = False
         try:
             import oci
 
             installed_ver = getattr(oci, "__version__", "")
-            if installed_ver and (
-                installed_ver == REQUIRED_OCI_VERSION
-                or installed_ver.startswith("2.181")
-            ):
+            if installed_ver == REQUIRED_OCI_VERSION:
                 _LOGGER.debug(
-                    "OCI SDK already installed (%s). Skipping git download.",
+                    "OCI SDK already installed and up to date (%s). Skipping git download.",
                     installed_ver,
                 )
                 return
             else:
                 _LOGGER.info(
-                    "OCI SDK version mismatch (installed: %s, required: %s). Updating...",
+                    "OCI SDK version mismatch (installed: '%s', required: '%s'). Updating...",
                     installed_ver,
                     REQUIRED_OCI_VERSION,
                 )
@@ -66,7 +61,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     "pip",
                     "install",
                     "--upgrade",
-                    "git+https://github.com/FaserF/oci-python-sdk.git@75b7f381f8885a967df461ebaf5396981e6a1e73#oci",
+                    REQUIRED_OCI_GIT_REF,
                 ],
                 capture_output=True,
                 text=True,
