@@ -31,13 +31,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         needs_install = False
         try:
             import oci
-
-            if oci.__version__ != "2.181.0.post3":
-                needs_install = True
         except ImportError:
             needs_install = True
 
         if needs_install:
+            _LOGGER.info("OCI Python SDK not found, installing custom fork...")
             result = subprocess.run(
                 [
                     sys.executable,
@@ -45,8 +43,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     "pip",
                     "install",
                     "--upgrade",
-                    "--upgrade-strategy",
-                    "eager",
                     "git+https://github.com/FaserF/oci-python-sdk.git@75b7f381f8885a967df461ebaf5396981e6a1e73#oci",
                 ],
                 capture_output=True,
