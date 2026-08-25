@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -198,8 +199,6 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "net_err_out": ("NetworkErrorOut", instance_id),
                 "load_avg": ("LoadAverage", instance_id),
             }
-
-            from concurrent.futures import ThreadPoolExecutor
 
             metrics_res: dict[str, Any] = {}
             with ThreadPoolExecutor(max_workers=8) as executor:
