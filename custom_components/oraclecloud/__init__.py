@@ -46,7 +46,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             needs_install = True
 
         if needs_install:
-            _LOGGER.info("Installing/updating custom OCI Python SDK (%s)...", REQUIRED_OCI_VERSION)
+            _LOGGER.info(
+                "Installing/updating custom OCI Python SDK (%s)...",
+                REQUIRED_OCI_VERSION,
+            )
             result = subprocess.run(
                 [
                     sys.executable,
