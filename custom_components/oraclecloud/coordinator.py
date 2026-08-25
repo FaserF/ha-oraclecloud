@@ -361,41 +361,49 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 compartment_id=self.compartment_id
             ).data
             volume_data = []
-            for vol in volumes:
-                # Get block volume metrics
-                vol_throttle = self._get_metric(
-                    "VolumeThrottledIOs",
-                    vol.id,
-                    start_time,
-                    end_time,
-                    self.compartment_id,
-                )
-                vol_read_tp = self._get_metric(
-                    "VolumeReadThroughput",
-                    vol.id,
-                    start_time,
-                    end_time,
-                    self.compartment_id,
-                )
-                vol_write_tp = self._get_metric(
-                    "VolumeWriteThroughput",
-                    vol.id,
-                    start_time,
-                    end_time,
-                    self.compartment_id,
-                )
-
-                volume_data.append(
-                    {
-                        "id": vol.id,
-                        "display_name": vol.display_name,
-                        "size_in_gbs": vol.size_in_gbs,
-                        "lifecycle_state": vol.lifecycle_state,
-                        "volume_throttled_ios": vol_throttle,
-                        "volume_read_throughput": vol_read_tp,
-                        "volume_write_throughput": vol_write_tp,
+            
+            with ThreadPoolExecutor(max_workers=8) as vol_executor:
+                future_to_vol = {}
+                for vol in volumes:
+                    future_to_vol[vol.id] = {
+                        "vol": vol,
+                        "throttle": vol_executor.submit(
+                            self._get_metric, "VolumeThrottledIOs", vol.id, start_time, end_time, self.compartment_id
+                        ),
+                        "read": vol_executor.submit(
+                            self._get_metric, "VolumeReadThroughput", vol.id, start_time, end_time, self.compartment_id
+                        ),
+                        "write": vol_executor.submit(
+                            self._get_metric, "VolumeWriteThroughput", vol.id, start_time, end_time, self.compartment_id
+                        ),
                     }
-                )
+                
+                for vol_id, tasks in future_to_vol.items():
+                    vol = tasks["vol"]
+                    try:
+                        vol_throttle = tasks["throttle"].result()
+                    except Exception:
+                        vol_throttle = None
+                    try:
+                        vol_read_tp = tasks["read"].result()
+                    except Exception:
+                        vol_read_tp = None
+                    try:
+                        vol_write_tp = tasks["write"].result()
+                    except Exception:
+                        vol_write_tp = None
+
+                    volume_data.append(
+                        {
+                            "id": vol.id,
+                            "display_name": vol.display_name,
+                            "size_in_gbs": vol.size_in_gbs,
+                            "lifecycle_state": vol.lifecycle_state,
+                            "volume_throttled_ios": vol_throttle,
+                            "volume_read_throughput": vol_read_tp,
+                            "volume_write_throughput": vol_write_tp,
+                        }
+                    )
             account_data["volumes"] = volume_data
         except Exception:
             pass
