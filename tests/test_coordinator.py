@@ -17,10 +17,14 @@ from .test_config_flow import MOCK_DATA
 @patch("custom_components.oraclecloud.coordinator.oci.core.VirtualNetworkClient")
 @patch("custom_components.oraclecloud.coordinator.oci.budget.BudgetClient")
 @patch("custom_components.oraclecloud.coordinator.oci.limits.LimitsClient")
-@patch("custom_components.oraclecloud.coordinator.oci.announcements_service.AnnouncementClient")
+@patch(
+    "custom_components.oraclecloud.coordinator.oci.announcements_service.AnnouncementClient"
+)
 @patch("custom_components.oraclecloud.coordinator.oci.identity.IdentityClient")
 @patch("custom_components.oraclecloud.coordinator.oci.core.BlockstorageClient")
-@patch("custom_components.oraclecloud.coordinator.oci.object_storage.ObjectStorageClient")
+@patch(
+    "custom_components.oraclecloud.coordinator.oci.object_storage.ObjectStorageClient"
+)
 async def test_coordinator_update(
     mock_objectstorage: Any,
     mock_blockstorage: Any,
