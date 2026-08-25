@@ -35,7 +35,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             import oci
 
             installed_ver = getattr(oci, "__version__", "")
-            if installed_ver != REQUIRED_OCI_VERSION:
+            if installed_ver and (installed_ver == REQUIRED_OCI_VERSION or installed_ver.startswith("2.181")):
+                _LOGGER.debug(
+                    "OCI SDK already installed (%s). Skipping git download.",
+                    installed_ver,
+                )
+                return
+            else:
                 _LOGGER.info(
                     "OCI SDK version mismatch (installed: %s, required: %s). Updating...",
                     installed_ver,
