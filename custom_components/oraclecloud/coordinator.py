@@ -8,14 +8,14 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import oci
-
-if TYPE_CHECKING:
-    import oci.announcements_service
-    import oci.budget
-    import oci.core
-    import oci.limits
-    import oci.monitoring
-    import oci.object_storage
+import oci.announcements_service
+import oci.budget
+import oci.core
+import oci.exceptions
+import oci.identity
+import oci.limits
+import oci.monitoring
+import oci.object_storage
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -79,16 +79,6 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _ensure_clients(self) -> None:
         """Ensure OCI clients are initialized. Must be called from the executor."""
-        # Ensure submodules are imported in the executor to avoid blocking the event loop
-        importlib.import_module("oci.core")
-        importlib.import_module("oci.monitoring")
-        importlib.import_module("oci.budget")
-        importlib.import_module("oci.limits")
-        importlib.import_module("oci.announcements_service")
-        importlib.import_module("oci.object_storage")
-        importlib.import_module("oci.identity")
-        importlib.import_module("oci.exceptions")
-
         if self.compute_client is None:
             self.compute_client = oci.core.ComputeClient(self.config)
         if self.monitoring_client is None:
