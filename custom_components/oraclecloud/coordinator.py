@@ -361,24 +361,39 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 compartment_id=self.compartment_id
             ).data
             volume_data = []
-            
+
             with ThreadPoolExecutor(max_workers=8) as vol_executor:
                 future_to_vol = {}
                 for vol in volumes:
                     future_to_vol[vol.id] = {
                         "vol": vol,
                         "throttle": vol_executor.submit(
-                            self._get_metric, "VolumeThrottledIOs", vol.id, start_time, end_time, self.compartment_id
+                            self._get_metric,
+                            "VolumeThrottledIOs",
+                            vol.id,
+                            start_time,
+                            end_time,
+                            self.compartment_id,
                         ),
                         "read": vol_executor.submit(
-                            self._get_metric, "VolumeReadThroughput", vol.id, start_time, end_time, self.compartment_id
+                            self._get_metric,
+                            "VolumeReadThroughput",
+                            vol.id,
+                            start_time,
+                            end_time,
+                            self.compartment_id,
                         ),
                         "write": vol_executor.submit(
-                            self._get_metric, "VolumeWriteThroughput", vol.id, start_time, end_time, self.compartment_id
+                            self._get_metric,
+                            "VolumeWriteThroughput",
+                            vol.id,
+                            start_time,
+                            end_time,
+                            self.compartment_id,
                         ),
                     }
-                
-                for vol_id, tasks in future_to_vol.items():
+
+                for _vol_id, tasks in future_to_vol.items():
                     vol = tasks["vol"]
                     try:
                         vol_throttle = tasks["throttle"].result()
