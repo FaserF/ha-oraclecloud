@@ -28,14 +28,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         _LOGGER = logging.getLogger(__name__)
 
+        # Targeted version of your custom fork
+        REQUIRED_OCI_VERSION = "2.181.0.post3"
         needs_install = False
         try:
             import oci
+
+            installed_ver = getattr(oci, "__version__", "")
+            if installed_ver != REQUIRED_OCI_VERSION:
+                _LOGGER.info(
+                    "OCI SDK version mismatch (installed: %s, required: %s). Updating...",
+                    installed_ver,
+                    REQUIRED_OCI_VERSION,
+                )
+                needs_install = True
         except ImportError:
             needs_install = True
 
         if needs_install:
-            _LOGGER.info("OCI Python SDK not found, installing custom fork...")
+            _LOGGER.info("Installing/updating custom OCI Python SDK (%s)...", REQUIRED_OCI_VERSION)
             result = subprocess.run(
                 [
                     sys.executable,
