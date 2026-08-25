@@ -14,7 +14,7 @@ def get_latest_tag():
         )
         tags = result.stdout.strip().split("\n")
         return tags[0] if tags and tags[0] else None
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 
