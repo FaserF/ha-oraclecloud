@@ -461,31 +461,31 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         for namespace in namespaces:
             for name in metric_names:
-                try:
-                    # Use a robust MQL query. [1m] interval for high-res agents, fallback to infraestructura
-                    # We use .mean() but since we've buffered, we should get the most recent valid point.
-                    details = oci.monitoring.models.SummarizeMetricsDataDetails(
-                        namespace=namespace,
-                        query=f'{name}[1m]{{resourceId="{instance_id}"}}.mean()',
-                        start_time=start_time_eff,
-                        end_time=end_time_eff,
-                    )
-                    stats = self.monitoring_client.summarize_metrics_data(
-                        compartment_id, details
-                    ).data
+                for interval in ("[1m]", "[5m]"):
+                    try:
+                        details = oci.monitoring.models.SummarizeMetricsDataDetails(
+                            namespace=namespace,
+                            query=f'{name}{interval}{{resourceId="{instance_id}"}}.mean()',
+                            start_time=start_time_eff,
+                            end_time=end_time_eff,
+                        )
+                        stats = self.monitoring_client.summarize_metrics_data(
+                            compartment_id, details
+                        ).data
 
-                    if stats and stats[0].aggregated_datapoints:
-                        # Return the latest available data point in the window
-                        val = stats[0].aggregated_datapoints[-1].value
-                        if val is not None:
-                            return round(float(val), 2)
+                        if stats and stats[0].aggregated_datapoints:
+                            # Return the latest available data point in the window
+                            val = stats[0].aggregated_datapoints[-1].value
+                            if val is not None:
+                                return round(float(val), 2)
 
-                except Exception as err:
-                    LOGGER.debug(
-                        "Failed to fetch metric %s from %s for %s: %s",
-                        name,
-                        namespace,
-                        instance_id,
-                        err,
-                    )
+                    except Exception as err:
+                        LOGGER.debug(
+                            "Failed to fetch metric %s (%s) from %s for %s: %s",
+                            name,
+                            interval,
+                            namespace,
+                            instance_id,
+                            err,
+                        )
         return None

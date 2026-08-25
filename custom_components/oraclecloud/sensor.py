@@ -50,16 +50,18 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key="network_bytes_in",
         name="Network In",
-        native_unit_of_measurement=UnitOfInformation.BYTES,
+        native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="network_bytes_out",
         name="Network Out",
-        native_unit_of_measurement=UnitOfInformation.BYTES,
+        native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
     ),
     SensorEntityDescription(
         key="instance_state",
@@ -113,17 +115,19 @@ SENSORS: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key="disk_bytes_read",
         name="Disk Read Bytes",
-        native_unit_of_measurement=UnitOfInformation.BYTES,
+        native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
         entity_registry_enabled_default=False,
     ),
     SensorEntityDescription(
         key="disk_bytes_written",
         name="Disk Write Bytes",
-        native_unit_of_measurement=UnitOfInformation.BYTES,
+        native_unit_of_measurement=UnitOfInformation.MEGABYTES,
         device_class=SensorDeviceClass.DATA_SIZE,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
         entity_registry_enabled_default=False,
     ),
     SensorEntityDescription(
@@ -486,6 +490,17 @@ class OCISensor(CoordinatorEntity[OCIUpdateCoordinator], SensorEntity):
 
         if self.entity_description.key == "vnic_conntrack_utilization":
             return instance_data.get("vnic_conntrack_utilization")
+
+        if self.entity_description.key in (
+            "network_bytes_in",
+            "network_bytes_out",
+            "disk_bytes_read",
+            "disk_bytes_written",
+        ):
+            val = instance_data.get(self.entity_description.key)
+            if val is not None:
+                return round(val / (1024 * 1024), 2)
+            return None
 
         return instance_data.get(self.entity_description.key)
 
