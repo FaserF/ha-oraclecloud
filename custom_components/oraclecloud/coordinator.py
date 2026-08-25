@@ -191,9 +191,15 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "disk": ("DiskUtilization", instance_id),
                 "net_in": ("NetworkBytesIn", instance_id),
                 "net_out": ("NetworkBytesOut", instance_id),
-                "net_throttle_in": ("VnicIngressDropsThrottle", vnic_id) if vnic_id else None,
-                "net_throttle_out": ("VnicEgressDropsThrottle", vnic_id) if vnic_id else None,
-                "vnic_conntrack": ("VnicConntrackUtilPercent", vnic_id) if vnic_id else None,
+                "net_throttle_in": ("VnicIngressDropsThrottle", vnic_id)
+                if vnic_id
+                else None,
+                "net_throttle_out": ("VnicEgressDropsThrottle", vnic_id)
+                if vnic_id
+                else None,
+                "vnic_conntrack": ("VnicConntrackUtilPercent", vnic_id)
+                if vnic_id
+                else None,
                 "disk_read_bytes": ("DiskBytesRead", instance_id),
                 "disk_write_bytes": ("DiskBytesWritten", instance_id),
                 "disk_read_iops": ("DiskIopsRead", instance_id),
