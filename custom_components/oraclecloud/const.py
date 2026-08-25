@@ -23,4 +23,3 @@ ATTR_OS_VERSION = "os_version"
 
 REQUIRED_OCI_VERSION = "2.181.0.post3"
 REQUIRED_OCI_GIT_REF = "git+https://github.com/FaserF/oci-python-sdk.git@75b7f381f8885a967df461ebaf5396981e6a1e73#oci"
-
