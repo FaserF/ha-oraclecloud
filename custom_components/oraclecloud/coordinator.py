@@ -262,189 +262,147 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "vnic_conntrack_utilization": metrics_res.get("vnic_conntrack"),
             }
 
-        # Fetch Account-Wide Metrics (Budgets, Limits, Announcements)
+        # Fetch Account-Wide Metrics (Budgets, Limits, Announcements, Object Storage) concurrently
         account_data: dict[str, Any] = {}
 
-        # Budgets
-        try:
-            assert self.budget_client is not None
-            # Use tenancy OCID for budgets as they are usually defined at the root
-            budgets = self.budget_client.list_budgets(self.config["tenancy"]).data
-            if budgets:
-                budget = budgets[0]  # Take first budget for simplicity
-                account_data["budget"] = {
-                    "amount": budget.amount,
-                    "actual_spend": budget.actual_spend,
-                    "forecasted_spend": budget.forecasted_spend,
-                    "alert_rule_count": budget.alert_rule_count,
+        def _fetch_budget():
+            if not self.budget_client:
+                return None
+            try:
+                budgets = self.budget_client.list_budgets(self.config["tenancy"]).data
+                if budgets:
+                    b = budgets[0]
+                    return {
+                        "amount": b.amount,
+                        "actual_spend": b.actual_spend,
+                        "forecasted_spend": b.forecasted_spend,
+                        "alert_rule_count": b.alert_rule_count,
+                    }
+            except Exception as err:
+                LOGGER.debug("Failed to fetch budgets: %s", err)
+            return None
+
+        def _fetch_limits():
+            if not self.limits_client or not self.identity_client:
+                return {}
+            try:
+                ads = self.identity_client.list_availability_domains(
+                    self.config["tenancy"]
+                ).data
+                relevant_limits = {
+                    "standard-a1-memory-count": 0.0,
+                    "standard-a1-core-count": 0.0,
                 }
-            else:
-                LOGGER.debug("No budgets found for tenancy %s", self.config["tenancy"])
-        except Exception as err:
-            LOGGER.error("Failed to fetch budgets: %s", err)
+                for ad in ads:
+                    try:
+                        limits = self.limits_client.list_limit_values(
+                            compartment_id=self.config["tenancy"],
+                            service_name="compute",
+                            availability_domain=ad.name,
+                        ).data
+                        for limit in limits:
+                            if limit.name == "standard-a1-memory-count":
+                                relevant_limits["standard-a1-memory-count"] += float(
+                                    limit.value
+                                )
+                            elif limit.name == "standard-a1-core-count":
+                                relevant_limits["standard-a1-core-count"] += float(
+                                    limit.value
+                                )
+                    except Exception as err:
+                        LOGGER.debug(
+                            "Failed to fetch limits for AD %s: %s", ad.name, err
+                        )
 
-        # Limits (Always Free ARM/AMD)
-        try:
-            assert self.limits_client is not None
-            assert self.identity_client is not None
-
-            # Fetch all Availability Domains to check limits in each
-            ads = self.identity_client.list_availability_domains(
-                self.config["tenancy"]
-            ).data
-
-            relevant_limits = {
-                "standard-a1-memory-count": 0.0,
-                "standard-a1-core-count": 0.0,
-            }
-
-            for ad in ads:
-                try:
+                if relevant_limits["standard-a1-core-count"] == 0:
                     limits = self.limits_client.list_limit_values(
                         compartment_id=self.config["tenancy"],
                         service_name="compute",
-                        availability_domain=ad.name,
                     ).data
                     for limit in limits:
                         if limit.name == "standard-a1-memory-count":
-                            relevant_limits["standard-a1-memory-count"] += float(
+                            relevant_limits["standard-a1-memory-count"] = float(
                                 limit.value
                             )
                         elif limit.name == "standard-a1-core-count":
-                            relevant_limits["standard-a1-core-count"] += float(
+                            relevant_limits["standard-a1-core-count"] = float(
                                 limit.value
                             )
-                except Exception as err:
-                    LOGGER.debug("Failed to fetch limits for AD %s: %s", ad.name, err)
 
-            # Fallback to regional limits if AD-specific ones are 0
-            if relevant_limits["standard-a1-core-count"] == 0:
-                limits = self.limits_client.list_limit_values(
+                return relevant_limits
+            except Exception as err:
+                LOGGER.debug("Failed to fetch limits: %s", err)
+                return {}
+
+        def _fetch_announcements():
+            if not self.announcements_client:
+                return 0, []
+            try:
+                announcements = self.announcements_client.list_announcements(
                     compartment_id=self.config["tenancy"],
-                    service_name="compute",
+                    lifecycle_state="ACTIVE",
                 ).data
-                for limit in limits:
-                    if limit.name == "standard-a1-memory-count":
-                        relevant_limits["standard-a1-memory-count"] = float(limit.value)
-                    elif limit.name == "standard-a1-core-count":
-                        relevant_limits["standard-a1-core-count"] = float(limit.value)
-
-            account_data["limits"] = relevant_limits
-        except Exception as err:
-            LOGGER.error("Failed to fetch limits: %s", err)
-
-        # Announcements
-        try:
-            assert self.announcements_client is not None
-            announcements = self.announcements_client.list_announcements(
-                compartment_id=self.config["tenancy"],
-                lifecycle_state="ACTIVE",
-            ).data
-            # AnnouncementsCollection has an 'items' attribute which is the list
-            account_data["announcements"] = len(announcements.items)
-            account_data["announcement_details"] = [
-                {
-                    "title": a.summary,
-                    "type": a.announcement_type,
-                    "time": a.time_one_value.isoformat() if a.time_one_value else None,
-                    "reference_ticket": a.reference_ticket_number,
-                }
-                for a in announcements.items
-            ]
-        except Exception as err:
-            LOGGER.error("Failed to fetch announcements: %s", err)
-
-        # Block Storage
-        try:
-            assert self.blockstorage_client is not None
-            volumes = self.blockstorage_client.list_volumes(
-                compartment_id=self.compartment_id
-            ).data
-            volume_data = []
-
-            with ThreadPoolExecutor(max_workers=8) as vol_executor:
-                future_to_vol = {}
-                for vol in volumes:
-                    future_to_vol[vol.id] = {
-                        "vol": vol,
-                        "throttle": vol_executor.submit(
-                            self._get_metric,
-                            "VolumeThrottledIOs",
-                            vol.id,
-                            start_time,
-                            end_time,
-                            self.compartment_id,
-                        ),
-                        "read": vol_executor.submit(
-                            self._get_metric,
-                            "VolumeReadThroughput",
-                            vol.id,
-                            start_time,
-                            end_time,
-                            self.compartment_id,
-                        ),
-                        "write": vol_executor.submit(
-                            self._get_metric,
-                            "VolumeWriteThroughput",
-                            vol.id,
-                            start_time,
-                            end_time,
-                            self.compartment_id,
-                        ),
-                    }
-
-                for _vol_id, tasks in future_to_vol.items():
-                    vol = tasks["vol"]
-                    try:
-                        vol_throttle = tasks["throttle"].result()
-                    except Exception:
-                        vol_throttle = None
-                    try:
-                        vol_read_tp = tasks["read"].result()
-                    except Exception:
-                        vol_read_tp = None
-                    try:
-                        vol_write_tp = tasks["write"].result()
-                    except Exception:
-                        vol_write_tp = None
-
-                    volume_data.append(
-                        {
-                            "id": vol.id,
-                            "display_name": vol.display_name,
-                            "size_in_gbs": vol.size_in_gbs,
-                            "lifecycle_state": vol.lifecycle_state,
-                            "volume_throttled_ios": vol_throttle,
-                            "volume_read_throughput": vol_read_tp,
-                            "volume_write_throughput": vol_write_tp,
-                        }
-                    )
-            account_data["volumes"] = volume_data
-        except Exception:
-            pass
-
-        # Object Storage
-        try:
-            assert self.object_storage_client is not None
-            namespace = self.object_storage_client.get_namespace().data
-            buckets = self.object_storage_client.list_buckets(
-                namespace, self.compartment_id
-            ).data
-            account_data["buckets"] = []
-            for bucket in buckets:
-                # get_bucket is a separate call for size/count
-                bucket_details = self.object_storage_client.get_bucket(
-                    namespace, bucket.name
-                ).data
-                account_data["buckets"].append(
+                details = [
                     {
-                        "name": bucket.name,
-                        "size": bucket_details.approximate_size,
-                        "count": bucket_details.approximate_count,
+                        "title": a.summary,
+                        "type": a.announcement_type,
+                        "time": a.time_one_value.isoformat()
+                        if a.time_one_value
+                        else None,
+                        "reference_ticket": a.reference_ticket_number,
                     }
-                )
-        except Exception:
-            pass
+                    for a in announcements.items
+                ]
+                return len(announcements.items), details
+            except Exception as err:
+                LOGGER.debug("Failed to fetch announcements: %s", err)
+                return 0, []
+
+        def _fetch_buckets():
+            if not self.object_storage_client:
+                return []
+            try:
+                namespace = self.object_storage_client.get_namespace().data
+                buckets = self.object_storage_client.list_buckets(
+                    namespace, self.compartment_id
+                ).data
+                res = []
+                for bucket in buckets:
+                    try:
+                        b_details = self.object_storage_client.get_bucket(
+                            namespace, bucket.name
+                        ).data
+                        res.append(
+                            {
+                                "name": bucket.name,
+                                "size": b_details.approximate_size,
+                                "count": b_details.approximate_count,
+                            }
+                        )
+                    except Exception:
+                        pass
+                return res
+            except Exception as err:
+                LOGGER.debug("Failed to fetch buckets: %s", err)
+                return []
+
+        with ThreadPoolExecutor(max_workers=4) as acc_exec:
+            future_budget = acc_exec.submit(_fetch_budget)
+            future_limits = acc_exec.submit(_fetch_limits)
+            future_announcements = acc_exec.submit(_fetch_announcements)
+            future_buckets = acc_exec.submit(_fetch_buckets)
+
+            budget_res = future_budget.result()
+            if budget_res:
+                account_data["budget"] = budget_res
+
+            account_data["limits"] = future_limits.result()
+
+            ann_count, ann_details = future_announcements.result()
+            account_data["announcements"] = ann_count
+            account_data["announcement_details"] = ann_details
+
+            account_data["buckets"] = future_buckets.result()
 
         # Calculate total used ARM resources
         total_used_arm_ocpu = 0.0
