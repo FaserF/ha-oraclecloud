@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import importlib
 import warnings
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import oci
 import oci.announcements_service
@@ -16,7 +15,6 @@ import oci.identity
 import oci.limits
 import oci.monitoring
 import oci.object_storage
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
