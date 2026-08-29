@@ -106,6 +106,8 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch data from OCI for all instances."""
         try:
             return await self.hass.async_add_executor_job(self._fetch_all_oci_data)
+        except ConfigEntryAuthFailed:
+            raise
         except oci.exceptions.ServiceError as err:
             if (
                 err.status in (401, 403)
@@ -117,9 +119,30 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 ) from err
             raise UpdateFailed(f"Error communicating with OCI API: {err}") from err
         except Exception as err:
+            if isinstance(err, oci.exceptions.ServiceError) or (
+                hasattr(err, "status") and err.status in (401, 403)
+            ):
+                raise ConfigEntryAuthFailed(
+                    f"Authentication failed with OCI API: {err}"
+                ) from err
             raise UpdateFailed(f"Error communicating with OCI API: {err}") from err
 
     def _fetch_all_oci_data(self) -> dict[str, Any]:
+        """Fetch data for all instances in the compartment."""
+        try:
+            return self._fetch_all_oci_data_internal()
+        except oci.exceptions.ServiceError as err:
+            if (
+                err.status in (401, 403)
+                or "NotAuthenticated" in str(err)
+                or "NotAuthorized" in str(err)
+            ):
+                raise ConfigEntryAuthFailed(
+                    f"Authentication failed with OCI API (status {err.status}): {err.message}"
+                ) from err
+            raise
+
+    def _fetch_all_oci_data_internal(self) -> dict[str, Any]:
         """Fetch data for all instances in the compartment."""
         self._ensure_clients()
 
