@@ -237,11 +237,27 @@ async def test_coordinator_no_vnic_attachment(
 
 
 @patch("custom_components.oraclecloud.coordinator.oci.core.ComputeClient")
+@patch("custom_components.oraclecloud.coordinator.oci.monitoring.MonitoringClient")
 @patch("custom_components.oraclecloud.coordinator.oci.core.VirtualNetworkClient")
+@patch("custom_components.oraclecloud.coordinator.oci.budget.BudgetClient")
+@patch("custom_components.oraclecloud.coordinator.oci.limits.LimitsClient")
+@patch(
+    "custom_components.oraclecloud.coordinator.oci.announcements_service.AnnouncementClient"
+)
 @patch("custom_components.oraclecloud.coordinator.oci.identity.IdentityClient")
+@patch("custom_components.oraclecloud.coordinator.oci.core.BlockstorageClient")
+@patch(
+    "custom_components.oraclecloud.coordinator.oci.object_storage.ObjectStorageClient"
+)
 async def test_coordinator_auth_failure(
+    mock_objectstorage: Any,
+    mock_blockstorage: Any,
     mock_identity: Any,
-    mock_network: Any,
+    mock_announcements: Any,
+    mock_limits: Any,
+    mock_budget: Any,
+    mock_vnic_client: Any,
+    mock_monitoring: Any,
     mock_compute: Any,
     hass: HomeAssistant,
 ) -> None:
