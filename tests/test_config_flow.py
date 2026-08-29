@@ -160,3 +160,48 @@ async def test_reconfigure_flow_success(
     assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
     assert entry.data["region"] == "eu-frankfurt-1"
+
+
+@patch("custom_components.oraclecloud.config_flow.validate_input")
+async def test_reauth_flow_success(mock_validate: Any, hass: HomeAssistant) -> None:
+    """Test a successful reauthentication."""
+    mock_validate.return_value = {"title": "OCI (ocid1.te...)"}
+
+    entry = MockConfigEntry(
+        version=1,
+        domain=DOMAIN,
+        title="OCI",
+        data=MOCK_DATA,
+        source=config_entries.SOURCE_USER,
+        options={},
+        entry_id="test",
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_REAUTH,
+            "entry_id": entry.entry_id,
+            "unique_id": entry.unique_id,
+        },
+        data=entry.data,
+    )
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+
+    new_credentials = {
+        "fingerprint": "87:65:43:21",
+        "region": "eu-frankfurt-1",
+        "key_content": "NEW_PRIVATE_KEY_CONTENT",
+    }
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        new_credentials,
+    )
+
+    assert result["type"] == data_entry_flow.FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert entry.data["fingerprint"] == "87:65:43:21"
+    assert entry.data["key_content"] == "NEW_PRIVATE_KEY_CONTENT"

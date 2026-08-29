@@ -169,6 +169,96 @@ async def test_coordinator_update(
     assert (
         data["account"]["volumes"][0]["volume_throttled_ios"] == 45.5
     )  # Mocked metric value
+    assert data["account"]["volumes"][0]["volume_read_throughput"] == 45.5
+    assert data["account"]["volumes"][0]["volume_write_throughput"] == 45.5
     assert len(data["account"]["buckets"]) == 1
     assert data["account"]["buckets"][0]["name"] == "my-bucket"
     assert data["account"]["buckets"][0]["size"] == 1024
+
+
+@patch("custom_components.oraclecloud.coordinator.oci.core.ComputeClient")
+@patch("custom_components.oraclecloud.coordinator.oci.monitoring.MonitoringClient")
+@patch("custom_components.oraclecloud.coordinator.oci.core.VirtualNetworkClient")
+@patch("custom_components.oraclecloud.coordinator.oci.budget.BudgetClient")
+@patch("custom_components.oraclecloud.coordinator.oci.limits.LimitsClient")
+@patch(
+    "custom_components.oraclecloud.coordinator.oci.announcements_service.AnnouncementClient"
+)
+@patch("custom_components.oraclecloud.coordinator.oci.identity.IdentityClient")
+@patch("custom_components.oraclecloud.coordinator.oci.core.BlockstorageClient")
+@patch(
+    "custom_components.oraclecloud.coordinator.oci.object_storage.ObjectStorageClient"
+)
+async def test_coordinator_no_vnic_attachment(
+    mock_objectstorage: Any,
+    mock_blockstorage: Any,
+    mock_identity: Any,
+    mock_announcements: Any,
+    mock_limits: Any,
+    mock_budget: Any,
+    mock_vnic_client: Any,
+    mock_monitoring: Any,
+    mock_compute: Any,
+    hass: HomeAssistant,
+) -> None:
+    """Test coordinator data update when an instance has no VNIC attachment."""
+    mock_entry = MagicMock()
+    mock_entry.data = MOCK_DATA
+
+    coordinator = OCIUpdateCoordinator(hass, mock_entry)
+
+    mock_instance = MagicMock()
+    mock_instance.id = "inst_no_vnic"
+    mock_instance.display_name = "Provisioning VM"
+    mock_instance.lifecycle_state = "PROVISIONING"
+    mock_instance.compartment_id = "comp1"
+    mock_instance.shape = "VM.Standard.E2.1.Micro"
+    mock_instance.shape_config = None
+    mock_instance.source_details = None
+
+    mock_compute.return_value.list_instances.return_value.data = [mock_instance]
+    # No VNICs returned
+    mock_compute.return_value.list_vnic_attachments.return_value.data = []
+
+    # Other empty returns
+    mock_identity.return_value.list_availability_domains.return_value.data = []
+    mock_announcements.return_value.list_announcements.return_value.data = MagicMock(
+        items=[]
+    )
+    mock_blockstorage.return_value.list_volumes.return_value.data = []
+    mock_objectstorage.return_value.get_namespace.return_value.data = "ns"
+    mock_objectstorage.return_value.list_buckets.return_value.data = []
+    mock_budget.return_value.list_budgets.return_value.data = []
+
+    data = await coordinator._async_update_data()
+    assert "inst_no_vnic" in data["instances"]
+    assert data["instances"]["inst_no_vnic"]["vnic_id"] is None
+    assert data["instances"]["inst_no_vnic"]["public_ip"] is None
+
+
+@patch("custom_components.oraclecloud.coordinator.oci.core.ComputeClient")
+async def test_coordinator_auth_failure(
+    mock_compute: Any,
+    hass: HomeAssistant,
+) -> None:
+    """Test coordinator handles OCI auth failure by raising ConfigEntryAuthFailed."""
+    import oci.exceptions
+    import pytest
+    from homeassistant.exceptions import ConfigEntryAuthFailed
+
+    mock_entry = MagicMock()
+    mock_entry.data = MOCK_DATA
+
+    coordinator = OCIUpdateCoordinator(hass, mock_entry)
+
+    # Simulate 401 NotAuthenticated ServiceError
+    service_error = oci.exceptions.ServiceError(
+        status=401,
+        code="NotAuthenticated",
+        headers={},
+        message="The required information to complete authentication was not provided.",
+    )
+    mock_compute.return_value.list_instances.side_effect = service_error
+
+    with pytest.raises(ConfigEntryAuthFailed):
+        await coordinator._async_update_data()

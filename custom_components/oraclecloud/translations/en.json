@@ -13,6 +13,16 @@
           "compartment": "Compartment OCID (optional)"
         }
       },
+      "reauth_confirm": {
+        "title": "Re-authenticate OCI API Credentials",
+        "description": "Please re-enter the API credentials for user {user}.",
+        "data": {
+          "fingerprint": "Fingerprint",
+          "region": "Region (e.g., eu-frankfurt-1)",
+          "key_content": "Private Key (PEM format)",
+          "compartment": "Compartment OCID (optional)"
+        }
+      },
       "reconfigure": {
         "title": "Reconfigure OCI API Credentials",
         "description": "Update your Oracle Cloud Infrastructure API credentials.",
@@ -33,7 +43,29 @@
     },
     "abort": {
       "already_configured": "Device is already configured",
-      "reconfigure_successful": "Re-configuration was successful"
+      "reconfigure_successful": "Re-configuration was successful",
+      "reauth_successful": "Re-authentication was successful"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "OCI Configuration Options",
+        "description": "Update your Oracle Cloud Infrastructure settings and credentials.",
+        "data": {
+          "tenancy": "Tenancy OCID",
+          "user": "User OCID",
+          "fingerprint": "Fingerprint",
+          "region": "Region (e.g., eu-frankfurt-1)",
+          "key_content": "Private Key (PEM format)",
+          "compartment": "Compartment OCID (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Oracle Cloud API",
+      "invalid_auth": "Invalid authentication credentials",
+      "unknown": "Unexpected error"
     }
   },
   "entity": {
@@ -68,6 +100,8 @@
       "limit_arm_mem": { "name": "Remaining ARM Memory" },
       "volume_size": { "name": "Volume Size" },
       "volume_state": { "name": "Volume State" },
+      "volume_read_throughput": { "name": "Volume Read Throughput" },
+      "volume_write_throughput": { "name": "Volume Write Throughput" },
       "bucket_size": { "name": "Bucket Size" },
       "bucket_count": { "name": "Object Count" }
     },
@@ -87,3 +121,4 @@
     }
   }
 }
+

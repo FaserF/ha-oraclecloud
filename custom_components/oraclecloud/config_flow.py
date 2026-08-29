@@ -62,11 +62,21 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     def _validate() -> str:
         try:
+            import oci.exceptions
             import oci.identity  # pylint: disable=import-outside-toplevel
 
             identity = oci.identity.IdentityClient(config)
             response = identity.get_tenancy(config["tenancy"])
             return response.data.name
+        except oci.exceptions.ServiceError as err:
+            LOGGER.error("OCI validation service error: %s", err)
+            if (
+                err.status in (401, 403)
+                or "NotAuthenticated" in str(err)
+                or "NotAuthorized" in str(err)
+            ):
+                raise InvalidAuth from err
+            raise CannotConnect from err
         except Exception as err:
             LOGGER.error("OCI validation failed: %s", err)
             raise CannotConnect from err
@@ -76,7 +86,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     return {"title": title}
 
 
-class OracleCloudConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
+class OracleCloudConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Oracle Cloud Infrastructure."""
 
     VERSION = 1
@@ -107,6 +117,71 @@ class OracleCloudConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+        )
+
+    async def async_step_reauth(self, entry_data: dict[str, Any]) -> ConfigFlowResult:
+        """Handle initiation of reauthentication."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle re-authentication with new API credentials."""
+        errors: dict[str, str] = {}
+        reauth_entry = self._get_reauth_entry()
+
+        if user_input is not None:
+            # Merge user_input with tenancy and user if not in schema
+            data = {
+                CONF_TENANCY: reauth_entry.data[CONF_TENANCY],
+                CONF_USER: reauth_entry.data[CONF_USER],
+                CONF_FINGERPRINT: user_input[CONF_FINGERPRINT],
+                CONF_REGION: user_input[CONF_REGION],
+                CONF_KEY_CONTENT: user_input[CONF_KEY_CONTENT],
+                CONF_COMPARTMENT: user_input.get(
+                    CONF_COMPARTMENT, reauth_entry.data.get(CONF_COMPARTMENT, "")
+                ),
+            }
+            try:
+                await validate_input(self.hass, data)
+                return self.async_update_reload_and_abort(
+                    reauth_entry,
+                    data_updates=data,
+                )
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except InvalidAuth:
+                errors["base"] = "invalid_auth"
+            except Exception:  # pylint: disable=broad-except
+                LOGGER.exception("Unexpected exception")
+                errors["base"] = "unknown"
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_FINGERPRINT,
+                    default=reauth_entry.data.get(CONF_FINGERPRINT),
+                ): str,
+                vol.Required(
+                    CONF_REGION,
+                    default=reauth_entry.data.get(CONF_REGION),
+                ): str,
+                vol.Required(
+                    CONF_KEY_CONTENT,
+                    default=reauth_entry.data.get(CONF_KEY_CONTENT),
+                ): str,
+                vol.Optional(
+                    CONF_COMPARTMENT,
+                    default=reauth_entry.data.get(CONF_COMPARTMENT, ""),
+                ): str,
+            }
+        )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={"user": reauth_entry.data.get(CONF_USER, "")},
         )
 
     async def async_step_reconfigure(

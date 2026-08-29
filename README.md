@@ -272,15 +272,12 @@ The OCI Monitoring API relies on several factors. If sensors show as "Unknown" o
 #### 📦 Storage Sensors (Volumes, Buckets)
 - **Compartment Scope**: By default, the integration searches the compartment you provided (or the Root). If your storage resources are in a different compartment, they will not appear unless you configure a specific Compartment OCID.
 
-### 🛡️ Dependency Workaround (Technical Note)
-As of early 2026, the official OCI Python SDK on PyPI has a restrictive version cap on `pyOpenSSL` and `cryptography` that conflicts with modern Home Assistant environments. We use a patched fork to resolve this:
+### 🛡️ Dependency
+The integration uses the official Oracle Cloud Infrastructure Python SDK from PyPI:
 
 ```json
-// Original: "oci>=2.168.3"
-// Workaround: https://github.com/FaserF/oci-python-sdk (Patched to remove PyOpenSSL caps)
-"requirements": ["git+https://github.com/FaserF/oci-python-sdk.git@master#oci"]
+"requirements": ["oci>=2.185.0"]
 ```
-This is a temporary measure until a official PR fix is merged and released by Oracle.
 
 ## 🧑‍💻 Development
 

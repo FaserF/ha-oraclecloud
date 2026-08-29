@@ -8,7 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, REQUIRED_OCI_GIT_REF, REQUIRED_OCI_VERSION
+from .const import DOMAIN
 
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
@@ -20,69 +20,6 @@ PLATFORMS: list[Platform] = [
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Oracle Cloud Infrastructure from a config entry."""
-
-    def check_and_install_oci() -> None:
-        import logging
-        import subprocess
-        import sys
-
-        _LOGGER = logging.getLogger(__name__)
-
-        needs_install = False
-        try:
-            import oci
-
-            installed_ver = getattr(oci, "__version__", "")
-            if installed_ver == REQUIRED_OCI_VERSION:
-                _LOGGER.debug(
-                    "OCI SDK already installed and up to date (%s). Skipping git download.",
-                    installed_ver,
-                )
-                return
-            else:
-                _LOGGER.info(
-                    "OCI SDK version mismatch (installed: '%s', required: '%s'). Updating...",
-                    installed_ver,
-                    REQUIRED_OCI_VERSION,
-                )
-                needs_install = True
-        except ImportError:
-            needs_install = True
-
-        if needs_install:
-            _LOGGER.info(
-                "Installing/updating custom OCI Python SDK (%s)...",
-                REQUIRED_OCI_VERSION,
-            )
-            result = subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "pip",
-                    "install",
-                    "--upgrade",
-                    REQUIRED_OCI_GIT_REF,
-                ],
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode != 0:
-                _LOGGER.error(
-                    "OCI SDK pip install failed (exit %d):\nSTDOUT: %s\nSTDERR: %s",
-                    result.returncode,
-                    result.stdout,
-                    result.stderr,
-                )
-                raise RuntimeError(
-                    f"pip install of oci-python-sdk failed: {result.stderr.strip()}"
-                )
-            # Purge cached oci modules so Python loads the freshly installed version
-            for mod in list(sys.modules.keys()):
-                if mod == "oci" or mod.startswith("oci."):
-                    del sys.modules[mod]
-
-    await hass.async_add_import_executor_job(check_and_install_oci)
-
     await hass.async_add_import_executor_job(
         importlib.import_module, "custom_components.oraclecloud.coordinator"
     )
@@ -95,6 +32,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Register update listener for configuration/options changes
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+
     # Pre-load diagnostics platform to avoid blocking import warning
     try:
         await hass.async_add_import_executor_job(
@@ -104,6 +44,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         pass
 
     return True
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload config entry."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

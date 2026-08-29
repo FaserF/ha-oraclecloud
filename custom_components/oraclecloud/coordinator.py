@@ -18,6 +18,7 @@ import oci.monitoring
 import oci.object_storage
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
@@ -105,6 +106,16 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Fetch data from OCI for all instances."""
         try:
             return await self.hass.async_add_executor_job(self._fetch_all_oci_data)
+        except oci.exceptions.ServiceError as err:
+            if (
+                err.status in (401, 403)
+                or "NotAuthenticated" in str(err)
+                or "NotAuthorized" in str(err)
+            ):
+                raise ConfigEntryAuthFailed(
+                    f"Authentication failed with OCI API (status {err.status}): {err.message}"
+                ) from err
+            raise UpdateFailed(f"Error communicating with OCI API: {err}") from err
         except Exception as err:
             raise UpdateFailed(f"Error communicating with OCI API: {err}") from err
 
@@ -160,6 +171,7 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             public_ip = None
             private_ip = None
             mac_address = None
+            vnic_id = None
             if vnics:
                 try:
                     vnic = self.network_client.get_vnic(vnics[0].vnic_id).data
@@ -252,7 +264,7 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Fetch Account-Wide Metrics (Budgets, Limits, Announcements, Object Storage) concurrently
         account_data: dict[str, Any] = {}
 
-        def _fetch_budget():
+        def _fetch_budget() -> dict[str, Any] | None:
             if not self.budget_client:
                 return None
             try:
@@ -269,7 +281,7 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 LOGGER.debug("Failed to fetch budgets: %s", err)
             return None
 
-        def _fetch_limits():
+        def _fetch_limits() -> dict[str, float]:
             if not self.limits_client or not self.identity_client:
                 return {}
             try:
@@ -321,7 +333,7 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 LOGGER.debug("Failed to fetch limits: %s", err)
                 return {}
 
-        def _fetch_announcements():
+        def _fetch_announcements() -> tuple[int, list[dict[str, Any]]]:
             if not self.announcements_client:
                 return 0, []
             try:
@@ -345,7 +357,7 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 LOGGER.debug("Failed to fetch announcements: %s", err)
                 return 0, []
 
-        def _fetch_buckets():
+        def _fetch_buckets() -> list[dict[str, Any]]:
             if not self.object_storage_client:
                 return []
             try:
@@ -373,7 +385,7 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 LOGGER.debug("Failed to fetch buckets: %s", err)
                 return []
 
-        def _fetch_volumes():
+        def _fetch_volumes() -> list[dict[str, Any]]:
             if not self.blockstorage_client:
                 return []
             try:
@@ -384,12 +396,28 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 for vol in vols:
                     if vol.lifecycle_state == "TERMINATED":
                         continue
-                    # Fetch throttled IOs metric if available
+                    # Fetch volume metrics if available
+                    now_utc = datetime.now(UTC)
+                    start_metric = now_utc - timedelta(minutes=10)
                     throttled_ios = self._get_metric(
                         "VolumeThrottledIOs",
                         vol.id,
-                        datetime.now(UTC) - timedelta(minutes=10),
-                        datetime.now(UTC),
+                        start_metric,
+                        now_utc,
+                        vol.compartment_id,
+                    )
+                    read_throughput = self._get_metric(
+                        "VolumeReadThroughput",
+                        vol.id,
+                        start_metric,
+                        now_utc,
+                        vol.compartment_id,
+                    )
+                    write_throughput = self._get_metric(
+                        "VolumeWriteThroughput",
+                        vol.id,
+                        start_metric,
+                        now_utc,
                         vol.compartment_id,
                     )
                     res.append(
@@ -399,6 +427,8 @@ class OCIUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                             "size_in_gbs": vol.size_in_gbs,
                             "lifecycle_state": vol.lifecycle_state,
                             "volume_throttled_ios": throttled_ios,
+                            "volume_read_throughput": read_throughput,
+                            "volume_write_throughput": write_throughput,
                         }
                     )
                 return res

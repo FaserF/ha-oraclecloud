@@ -13,6 +13,16 @@
           "compartment": "Compartment OCID (optional)"
         }
       },
+      "reauth_confirm": {
+        "title": "OCI API Zugangsdaten erneut authentifizieren",
+        "description": "Bitte gib die API-Zugangsdaten für Benutzer {user} erneut ein.",
+        "data": {
+          "fingerprint": "Fingerabdruck",
+          "region": "Region (z.B. eu-frankfurt-1)",
+          "key_content": "Privater Schlüssel (PEM-Format)",
+          "compartment": "Compartment OCID (optional)"
+        }
+      },
       "reconfigure": {
         "title": "OCI API Zugangsdaten neu konfigurieren",
         "description": "Aktualisiere Deine Oracle Cloud Infrastructure API-Zugangsdaten.",
@@ -33,7 +43,29 @@
     },
     "abort": {
       "already_configured": "Gerät ist bereits konfiguriert",
-      "reconfigure_successful": "Neukonfiguration war erfolgreich"
+      "reconfigure_successful": "Neukonfiguration war erfolgreich",
+      "reauth_successful": "Re-Authentifizierung war erfolgreich"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "OCI Konfigurationsoptionen",
+        "description": "Aktualisiere Deine Oracle Cloud Infrastructure Einstellungen und Zugangsdaten.",
+        "data": {
+          "tenancy": "Tenancy OCID",
+          "user": "Benutzer OCID",
+          "fingerprint": "Fingerabdruck",
+          "region": "Region (z.B. eu-frankfurt-1)",
+          "key_content": "Privater Schlüssel (PEM-Format)",
+          "compartment": "Compartment OCID (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zur Oracle Cloud API fehlgeschlagen",
+      "invalid_auth": "Ungültige Authentifizierungsdaten",
+      "unknown": "Unerwarteter Fehler"
     }
   },
   "entity": {
@@ -68,6 +100,8 @@
       "limit_arm_mem": { "name": "Verbleibender ARM-RAM" },
       "volume_size": { "name": "Volumengröße" },
       "volume_state": { "name": "Volumen-Status" },
+      "volume_read_throughput": { "name": "Volumen Lese-Durchsatz" },
+      "volume_write_throughput": { "name": "Volumen Schreib-Durchsatz" },
       "bucket_size": { "name": "Bucket-Größe" },
       "bucket_count": { "name": "Anzahl der Objekte" }
     },
@@ -87,3 +121,4 @@
     }
   }
 }
+

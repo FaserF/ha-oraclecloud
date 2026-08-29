@@ -66,3 +66,11 @@ async def test_device_tracker(hass: HomeAssistant) -> None:
     # Test disconnected
     mock_instance.lifecycle_state = "STOPPED"
     assert tracker.is_connected is False
+
+    # Test tracker initialized when instance data is not yet in coordinator
+    mock_coordinator.data = {"instances": {}}
+    tracker_missing = OCIDeviceTracker(mock_coordinator, "inst_unknown")
+    assert tracker_missing.device_info["name"] == "inst_unknown"
+    assert tracker_missing.device_info["model"] == "Compute Instance"
+    assert tracker_missing.is_connected is False
+    assert tracker_missing.extra_state_attributes == {}

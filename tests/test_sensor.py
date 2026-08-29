@@ -108,3 +108,17 @@ async def test_sensors(hass: HomeAssistant) -> None:
     description = next(s for s in VOLUME_SENSORS if s.key == "volume_throttled_ios")
     volume_sensor = OCIVolumeSensor(mock_coordinator, "vol1", description)
     assert volume_sensor.native_value == 0.0
+
+    # Test Volume Throughput Sensors
+    mock_coordinator.data["account"]["volumes"][0]["volume_read_throughput"] = 1048576.0
+    mock_coordinator.data["account"]["volumes"][0]["volume_write_throughput"] = (
+        2097152.0
+    )
+
+    read_desc = next(s for s in VOLUME_SENSORS if s.key == "volume_read_throughput")
+    read_sensor = OCIVolumeSensor(mock_coordinator, "vol1", read_desc)
+    assert read_sensor.native_value == 1048576.0
+
+    write_desc = next(s for s in VOLUME_SENSORS if s.key == "volume_write_throughput")
+    write_sensor = OCIVolumeSensor(mock_coordinator, "vol1", write_desc)
+    assert write_sensor.native_value == 2097152.0

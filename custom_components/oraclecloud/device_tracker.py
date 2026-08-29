@@ -48,6 +48,8 @@ class OCIDeviceTracker(CoordinatorEntity[OCIUpdateCoordinator], TrackerEntity):
         super().__init__(coordinator)
         self.instance_id = instance_id
         self._attr_unique_id = f"{instance_id}_tracker"
+        self._instance_display_name = instance_id
+        self._instance_shape = "Compute Instance"
 
         if (
             instance_data := coordinator.data["instances"].get(instance_id)
