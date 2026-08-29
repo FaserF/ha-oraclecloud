@@ -236,9 +236,13 @@ async def test_coordinator_no_vnic_attachment(
     assert data["instances"]["inst_no_vnic"]["public_ip"] is None
 
 
+@patch("custom_components.oraclecloud.coordinator.oci.identity.IdentityClient")
+@patch("custom_components.oraclecloud.coordinator.oci.core.VirtualNetworkClient")
 @patch("custom_components.oraclecloud.coordinator.oci.core.ComputeClient")
 async def test_coordinator_auth_failure(
     mock_compute: Any,
+    mock_network: Any,
+    mock_identity: Any,
     hass: HomeAssistant,
 ) -> None:
     """Test coordinator handles OCI auth failure by raising ConfigEntryAuthFailed."""
@@ -251,7 +255,7 @@ async def test_coordinator_auth_failure(
 
     coordinator = OCIUpdateCoordinator(hass, mock_entry)
 
-    # Simulate 401 NotAuthenticated ServiceError
+    # Simulate 401 NotAuthenticated ServiceError on list_instances
     service_error = oci.exceptions.ServiceError(
         status=401,
         code="NotAuthenticated",
