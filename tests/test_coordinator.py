@@ -257,6 +257,6 @@ async def test_coordinator_auth_failure(
         message="The required information to complete authentication was not provided.",
     )
 
-    with patch.object(coordinator, "_fetch_all_oci_data", side_effect=service_error):
+    with patch.object(hass, "async_add_executor_job", side_effect=service_error):
         with pytest.raises(ConfigEntryAuthFailed):
             await coordinator._async_update_data()
