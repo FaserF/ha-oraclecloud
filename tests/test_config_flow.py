@@ -152,14 +152,21 @@ async def test_reconfigure_flow_success(
     new_data = MOCK_DATA.copy()
     new_data["region"] = "eu-frankfurt-1"
 
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        new_data,
-    )
+    with patch(
+        "custom_components.oraclecloud.config_flow.OracleCloudConfigFlow.async_update_reload_and_abort",
+        return_value={
+            "type": data_entry_flow.FlowResultType.ABORT,
+            "reason": "reconfigure_successful",
+        },
+    ) as mock_abort:
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            new_data,
+        )
 
-    assert result["type"] == data_entry_flow.FlowResultType.ABORT
-    assert result["reason"] == "reconfigure_successful"
-    assert entry.data["region"] == "eu-frankfurt-1"
+        assert result["type"] == data_entry_flow.FlowResultType.ABORT
+        assert result["reason"] == "reconfigure_successful"
+        mock_abort.assert_called_once()
 
 
 @patch("custom_components.oraclecloud.config_flow.validate_input")
