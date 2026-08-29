@@ -24,6 +24,31 @@ for submod in [
     setattr(mock_oci, submod, sub_mock)
     sys.modules[full_name] = sub_mock
 
+
+class FakeServiceError(Exception):
+    """Fake ServiceError for test mocking."""
+
+    def __init__(
+        self,
+        status: int = 0,
+        code: str = "",
+        headers: dict | None = None,
+        message: str = "",
+        *args,
+        **kwargs,
+    ) -> None:
+        super().__init__(message)
+        self.status = status
+        self.code = code
+        self.headers = headers or {}
+        self.message = message
+
+
+mock_oci.exceptions.ServiceError = FakeServiceError
+mock_oci.exceptions.RequestException = Exception
+mock_oci.exceptions.ConnectTimeout = Exception
+mock_oci.exceptions.ClientError = Exception
+
 # Special case for monitoring.models
 mock_oci.monitoring.models = MagicMock()
 sys.modules["oci.monitoring.models"] = mock_oci.monitoring.models
