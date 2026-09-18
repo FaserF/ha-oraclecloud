@@ -8,11 +8,11 @@ jobs:
     name: Validate Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v7.0.0
         with:
-          python-version: '3.14'
+          python-version: '3.14.7'
           cache: "pip"
       - name: Validate JSON/YAML
         run: |
